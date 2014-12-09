@@ -21,29 +21,13 @@ pthread_mutex_t frameLocker;
 const string videoStreamAddress = "http://10.0.0.69/mjpg/video.mjpg";
 
 //Frame updater method which runs on seperate thread
-void* GpuThreshold(void *arg)
-{
-	gpu::GpuMat *channel = (&GpuMat)(arg);
-	gpu::GpuMat ths;
-	gpu::threshold(channel,ths,MIN_THRESH,MAX_THRESH,THRESH_BINARY);
-	ths.CopyTo(channel);
-}
-
-void* GpuNOT(void *arg)
-{
-	gpu::GpuMat *channel = (&GpuMat)(arg);
-	gpu::GpuMat nope;
-	gpu::bitwise_not(channel,nope);
-	nope.CopyTo(channel);
-}
-
-void* UpdateFrame(void *arg)
+void *UpdateFrame(void *arg)
 {
 	for(;;)
 	{
 		Mat tempFrame;
 		vcap >> tempFrame;
-
+		
 		//Mutex critial area
 		pthread_mutex_lock(&frameLocker);
 		frame = tempFrame;
@@ -52,14 +36,14 @@ void* UpdateFrame(void *arg)
 	}
 }
 
-int main(int, char**) {
+int main(int, char**) {	
 
-	//Open the video stream
+	//Open the video stream 
 	vcap.open(videoStreamAddress);
-
+	
 	//initialize threads
-	pthread_mutex_init(&frameLocker,NULL);
-	pthread_t UpdThread;
+	pthread_mutex_init(&frameLocker,NULL);	
+	pthread_t UpdThread;	
 	pthread_create(&UpdThread, NULL, UpdateFrame, NULL);
 
 	//Clock variables
@@ -69,9 +53,6 @@ int main(int, char**) {
 	//Matrices
 	Mat currentFrame, threshed, redblue;
 	gpu::GpuMat dst, src, chan[3], ths[3], redAndBlue, erd;
-
-	//other loop threads
-	pthread_t ThreshThreads[3];
 
 	for(;;)
 	{
@@ -94,33 +75,15 @@ int main(int, char**) {
 
 		gpu::split(src,chan); //Split to three channels
 
-/*
+		gpu::threshold(chan[1],ths[1],MIN_THRESH,MAX_THRESH,THRESH_BINARY); //threshold green
+
+		//Threshold the two other channels
 		gpu::threshold(chan[0],ths[0],MIN_THRESH,MAX_THRESH,THRESH_BINARY);
-		gpu::threshold(chan[1],ths[1],MIN_THRESH,MAX_THRESH,THRESH_BINARY);
 		gpu::threshold(chan[2],ths[2],MIN_THRESH,MAX_THRESH,THRESH_BINARY);
-*/
-		for(int i = 0; i < 3; i++)
-		{
-			pthread_create(&ThreshThreads[i],NULL,GpuThreshold,(void*)(chan[i]);
-		}
-
-		void* status;
-
-		for(int i = 0; i < 3; i++)
-		{
-			pthread_join(ThreshThreads[i],status);
-		}
 
 		//Invert the Red and Blue Channels
-/*
 		gpu::bitwise_not(ths[0],chan[0]);
 		gpu::bitwise_not(ths[2],chan[2]);
-*/
-		pthread_create(&ThreshThreads[0],NULL,GpuNOT,(void*)(chan[0]);
-		pthread_create(&ThreshThreads[2],NULL,GpuNOT,(void*)(chan[2]);
-
-		pthread_join(ThreshThreads[0],status);
-		pthread_join(ThreshThreads[2],status);
 
 		//AND it all togther
 		gpu::bitwise_and(chan[0],chan[2],redAndBlue);
@@ -148,3 +111,5 @@ int main(int, char**) {
 		waitKey(1);
 	}
 }
+
+
