@@ -10,9 +10,6 @@
 using namespace cv;
 using namespace std;
 
-#define MIN_THRESH 220
-#define MAX_THRESH 255
-
 //GLOBALS
 VideoCapture vcap;
 Mat frame;
@@ -51,13 +48,14 @@ int main(int, char**) {
 	double elapsed;
 
 	//Matrices
-	Mat currentFrame, threshed, redblue;
-	gpu::GpuMat dst, src, chan[3], ths[3], redAndBlue, erd;
+	Mat currentFrame, threshed, greenCh;
+	gpu::GpuMat dst, src, chan[3], ths[3], redAndBlue;
 
 	for(;;)
 	{
 		//Start the clock
-		clock_gettime(CLOCK_MONOTONIC, &start);
+		clock_gettime(CLOCK_MONOTONIC, &start);	
+	
 
 		//MUTEX critical area
 		pthread_mutex_lock(&frameLocker);
@@ -72,36 +70,31 @@ int main(int, char**) {
 
 		//GPU Code
 		src.upload(currentFrame);
-
+		
 		gpu::split(src,chan); //Split to three channels
 
-		gpu::threshold(chan[1],ths[1],MIN_THRESH,MAX_THRESH,THRESH_BINARY); //threshold green
+		gpu::threshold(chan[1],ths[1],230,255,THRESH_BINARY); //threshold green
 
 		//Threshold the two other channels
-		gpu::threshold(chan[0],ths[0],MIN_THRESH,MAX_THRESH,THRESH_BINARY);
-		gpu::threshold(chan[2],ths[2],MIN_THRESH,MAX_THRESH,THRESH_BINARY);
-
-		//Invert the Red and Blue Channels
+		gpu::threshold(chan[0],ths[0],230,255,THRESH_BINARY);
+		gpu::threshold(chan[2],ths[2],230,255,THRESH_BINARY);
+		
 		gpu::bitwise_not(ths[0],chan[0]);
 		gpu::bitwise_not(ths[2],chan[2]);
-
-		//AND it all togther
+		
 		gpu::bitwise_and(chan[0],chan[2],redAndBlue);
+		
 		gpu::bitwise_and(redAndBlue,ths[1],dst);
+		
 
-		//Filter out little pseudo targets
-		gpu::erode(dst,erd,Mat());
-		gpu::dilate(erd,dst,Mat());
-
-		//Download to RAM
 		dst.download(threshed);
-//		redAndBlue.download(redblue);
+		redAndBlue.download(greenCh);
 
 		//imshow - disabled for performance
-//		imshow("Original Image", currentFrame);
-//		imshow("NOT Red AND NOT Blue", redblue);
-//		imshow("Threshed", threshed);
-
+		imshow("Original Image", currentFrame);
+		imshow("NOT Green AND NOT Blue", greenCh);
+		imshow("Threshed", threshed);
+		
 		//Clock
 		clock_gettime(CLOCK_MONOTONIC, &finish);
 		elapsed = (finish.tv_sec - start.tv_sec);
