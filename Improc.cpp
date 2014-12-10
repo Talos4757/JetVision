@@ -18,7 +18,7 @@ string videoStreamAddress = "http://10.47.57.69/mjpg/video.mjpg";
 
 void* continousFrameUpdater(void* arg)
 {
-  UpdaterStruct *info = static_cast<UpdaterStruct*>(arg);
+  UpdaterStruct *info = (UpdaterStruct*)arg;
   Mat *criticalFrame = info->frame;
   VideoCapture *vidCap = info->vidCap;
   info->vidCap->open(videoStreamAddress);
@@ -47,7 +47,7 @@ void* continousFrameUpdater(void* arg)
 
 void* parallelGpuThreshold(void* arg)
 {
-  gpu::GpuMat *source_and_final = static_cast<gpu::GpuMat*>(arg);
+  gpu::GpuMat *source_and_final = (gpu::GpuMat*)arg;
   gpu::GpuMat *middle;
 
   gpu::threshold(*source_and_final,*middle,MIN_THRESH,MAX_THRESH,THRESH_BINARY);
@@ -58,7 +58,7 @@ void* parallelGpuThreshold(void* arg)
 
 void* parallelGpuBitwise_NOT(void* arg)
 {
-  gpu::GpuMat *source_and_final = static_cast<gpu::GpuMat*>(arg);
+  gpu::GpuMat *source_and_final = (gpu::GpuMat*)(arg);
   gpu::GpuMat *middle;
 
   gpu::bitwise_not(*source_and_final,*middle);
@@ -84,7 +84,7 @@ void PreProcessFrame(Mat *src_host, Mat *dst_host, pthread_mutex_t *frameLocker,
 
   for(int i = 0; i < 3; i++)
   {
-    pthread_create(&thresh_threads[i],NULL, parallelGpuThreshold,static_cast<void*>(channels[i]));
+    pthread_create(&thresh_threads[i],NULL, parallelGpuThreshold,(void*)channels[i]);
   }
 
   //wait for threshing threads to terminate
@@ -131,7 +131,7 @@ int main()
   frameUpdaterInfo->frameLocker = &frameLocker;
 
   //Start the updater thread
-  pthread_create(&updater_thread,NULL,continousFrameUpdater,static_cast<void*>(frameUpdaterInfo));
+  pthread_create(&updater_thread,NULL,continousFrameUpdater,(void*)frameUpdaterInfo);
 
   //Start processing
   while(true) //TODO loop until keypress
