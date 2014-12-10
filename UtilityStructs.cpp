@@ -4,4 +4,4 @@ struct UpdaterStruct
   Mat *frame;
   //GpuMat *gpuFrame;
   pthread_mutex_t *frameLocker;
-}
+};
