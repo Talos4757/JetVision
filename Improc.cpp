@@ -9,7 +9,7 @@
 using namespace std;
 using namespace cv;
 
-#include "UtilityStructs.cpp"
+#include "UtilityStructs.h"
 
 #define MIN_THRESH 220
 #define MAX_THRESH 255
@@ -116,8 +116,8 @@ int main()
   pthread_t updater_thread;
 
   //Mutex setup
-  pthread_mutex_t *frameLocker;
-  pthread_mutex_init(frameLocker,NULL);
+  pthread_mutex_t frameLocker;
+  pthread_mutex_init(&frameLocker,NULL);
 
   //video capture setup
   VideoCapture *vidCap = new VideoCapture();
@@ -128,7 +128,7 @@ int main()
   UpdaterStruct *frameUpdaterInfo = new UpdaterStruct();
   frameUpdaterInfo->vidCap = vidCap;
   frameUpdaterInfo->frame = frame_host;
-  frameUpdaterInfo->frameLocker = frameLocker;
+  frameUpdaterInfo->frameLocker = &frameLocker;
 
   //Start the updater thread
   pthread_create(&updater_thread,NULL,continousFrameUpdater,static_cast<void*>(frameUpdaterInfo));
@@ -136,7 +136,7 @@ int main()
   //Start processing
   while(true) //TODO loop until keypress
   {
-    PreProcessFrame(frame_host,prePro_host,frameLocker,false);
+    PreProcessFrame(frame_host,prePro_host,&frameLocker,false);
   }
   //Termination code
   delete vidCap,frame_host;
