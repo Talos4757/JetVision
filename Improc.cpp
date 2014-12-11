@@ -66,8 +66,7 @@ void* parallelGpuBitwise_NOT(void* arg)
 
 //PreProcess variables
 Mat copiedMat;
-gpu::GpuMat src, dst, channels[3], redBlueAND, redBlueNOT, eroded;
-pthread_t thresh_threads[3],bitwise_not_threads[2];
+gpu::GpuMat src, dst, channels[3],midChannels[3], redBlueAND, redBlueNOT, eroded;
 
 void PreProcessFrame(Mat *src_host, Mat *dst_host, pthread_mutex_t *frameLocker, bool DisplayResualt)
 {
@@ -84,23 +83,15 @@ void PreProcessFrame(Mat *src_host, Mat *dst_host, pthread_mutex_t *frameLocker,
   {
     src.upload(copiedMat);
 
-    gpu::split(src,channels);
+    gpu::split(src,midChannels);
 
     for(int i = 0; i < 3; i++)
     {
-      pthread_create(&thresh_threads[i],NULL, parallelGpuThreshold,(void*)&channels[i]);
+      gpu::threshold(midChannels[i],channels[i],MIN_THRESH,MAX_THRESH,THRESH_BINARY);
     }
-
-    //wait for threshing threads to terminate
-    pthread_join(thresh_threads[2],NULL);
-    pthread_join(thresh_threads[0],NULL);
 
     gpu::bitwise_and(channels[0],channels[2],redBlueAND);
     gpu::bitwise_not(redBlueAND,redBlueNOT);
-
-    //wait for the green threshing thread
-    pthread_join(thresh_threads[1],NULL);
-
     gpu::bitwise_and(redBlueNOT,channels[1],dst);
 
     gpu::erode(dst,eroded,Mat(),Point(-1,-1),3);
@@ -151,12 +142,15 @@ int main()
     clock_gettime(CLOCK_MONOTONIC, &start);
 
     //Start processing
-    PreProcessFrame(&frame_host,&prePro_host,&frameLocker,true);
+    PreProcessFrame(&frame_host,&prePro_host,&frameLocker,false);
 
-    //Clock
-    clock_gettime(CLOCK_MONOTONIC, &finish);
-    elapsed = (finish.tv_sec - start.tv_sec);
-    elapsed += (finish.tv_nsec - start.tv_nsec) / 1000000.0;
-    cout << elapsed << "ms" << endl;
+    if(!prePro_host.empty())
+    {
+      //Clock
+      clock_gettime(CLOCK_MONOTONIC, &finish);
+      elapsed = (finish.tv_sec - start.tv_sec);
+      elapsed += (finish.tv_nsec - start.tv_nsec) / 1000000.0;
+      cout << elapsed << "ms" << endl;
+    }
   }
 }
