@@ -1,10 +1,11 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <ctime>
-#include <iostream>
+#include <vector>
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/gpu/gpu.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 
 using namespace std;
 using namespace cv;
@@ -109,6 +110,37 @@ void PreProcessFrame(Mat *src_host, Mat *dst_host, pthread_mutex_t *frameLocker,
   }
 }
 
+
+//Convex Variables
+vector<vector<Point> > contours;
+vector<Vec4i> hierarchy;
+
+void Convex(Mat *src, Mat *dst ,bool Display)
+{
+  findContours(*src, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
+  vector<vector<Point> >hull(contours.size());
+  for(int i = 0; i < contours.size(); i++)
+  {
+    convexHull(Mat(contours[i]), hull[i], false);
+  }
+
+  Mat drawing = Mat::zeros(src->size(), CV_8UC3 );
+  for( int i = 0; i< contours.size(); i++ )
+  {
+    Scalar color = Scalar(255,0,0);
+    drawContours(drawing, contours, i, color, 1, 8, vector<Vec4i>(), 0, Point() );
+    drawContours(drawing, hull, i, color, 1, 8, vector<Vec4i>(), 0, Point() );
+  }
+
+  // Show in a window
+  if(Display)
+  {
+    imshow( "Hull demo", drawing );
+    waitKey(1);
+  }
+  dst = &drawing;
+}
+
 int main()
 {
   //Set up the frame updaer thread
@@ -142,10 +174,12 @@ int main()
     clock_gettime(CLOCK_MONOTONIC, &start);
 
     //Start processing
-    PreProcessFrame(&frame_host,&prePro_host,&frameLocker,false);
+    PreProcessFrame(&frame_host,&prePro_host,&frameLocker,true);
 
     if(!prePro_host.empty())
     {
+      Convex(&prePro_host,&frame_host,true);
+
       //Clock
       clock_gettime(CLOCK_MONOTONIC, &finish);
       elapsed = (finish.tv_sec - start.tv_sec);
