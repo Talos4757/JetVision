@@ -14,7 +14,7 @@ using namespace cv;
 #define MIN_THRESH 220
 #define MAX_THRESH 255
 
-string videoStreamAddress = "http://10.47.57.69/mjpg/video.mjpg";
+string videoStreamAddress = "http://10.0.0.69/mjpg/video.mjpg";
 
 void* continousFrameUpdater(void* arg)
 {
@@ -69,44 +69,50 @@ void* parallelGpuBitwise_NOT(void* arg)
 
 void PreProcessFrame(Mat *src_host, Mat *dst_host, pthread_mutex_t *frameLocker, bool DisplayResualt)
 {
-  Mat *copiedMat;
-  gpu::GpuMat *src, *dst, *channels[3], *redBlueAND, *redBlueNOT, *eroded;
+  Mat copiedMat;
+  gpu::GpuMat src, dst, channels[3], redBlueAND, redBlueNOT, eroded;
   pthread_t thresh_threads[3],bitwise_not_threads[2];
 
-  //Mutex criticak area
+  //Mutex critical area
   pthread_mutex_lock(frameLocker);
-  src_host->copyTo(*copiedMat);
+  src_host->copyTo(copiedMat);
   pthread_mutex_unlock(frameLocker);
   //End of mutex critical area
-
-  src->upload(*copiedMat);
-  gpu::split(*src,*channels);
-
-  for(int i = 0; i < 3; i++)
+  if(copiedMat.empty())
   {
-    pthread_create(&thresh_threads[i],NULL, parallelGpuThreshold,(void*)channels[i]);
+    cout << "Cannot process an empty frame. Skipping" << endl;
   }
-
-  //wait for threshing threads to terminate
-  pthread_join(thresh_threads[2],NULL);
-  pthread_join(thresh_threads[0],NULL);
-
-  gpu::bitwise_and(*channels[0],*channels[2],*redBlueAND);
-  gpu::bitwise_not(*redBlueAND,*redBlueNOT);
-
-  //wait for the green threshing thread
-  pthread_join(thresh_threads[1],NULL);
-
-  gpu::bitwise_and(*redBlueNOT,*channels[1],*dst);
-
-  gpu::erode(*dst,*eroded,Mat(),Point(-1,-1),2);
-  gpu::dilate(*eroded,*dst,Mat());
-
-  dst->download(*dst_host);
-
-  if(DisplayResualt)
+  else
   {
-    imshow("Preprocessing Resault",*dst_host);
+    src.upload(copiedMat);
+    gpu::split(src,channels);
+
+    for(int i = 0; i < 3; i++)
+    {
+      pthread_create(&thresh_threads[i],NULL, parallelGpuThreshold,(void*)&channels[i]);
+    }
+
+    //wait for threshing threads to terminate
+    pthread_join(thresh_threads[2],NULL);
+    pthread_join(thresh_threads[0],NULL);
+
+    gpu::bitwise_and(channels[0],channels[2],redBlueAND);
+    gpu::bitwise_not(redBlueAND,redBlueNOT);
+
+    //wait for the green threshing thread
+    pthread_join(thresh_threads[1],NULL);
+
+    gpu::bitwise_and(redBlueNOT,channels[1],dst);
+
+    gpu::erode(dst,eroded,Mat(),Point(-1,-1),2);
+    gpu::dilate(eroded,dst,Mat());
+
+    dst.download(*dst_host);
+
+    if(DisplayResualt)
+    {
+      imshow("Preprocessing Resault",*dst_host);
+    }
   }
 }
 
@@ -120,24 +126,22 @@ int main()
   pthread_mutex_init(&frameLocker,NULL);
 
   //video capture setup
-  VideoCapture *vidCap = new VideoCapture();
-  Mat *frame_host = new Mat();
-  Mat *prePro_host = new Mat();
+  VideoCapture vidCap;
+  Mat frame_host;
+  Mat prePro_host;
 
   //Parallel frame updater info struct
-  UpdaterStruct *frameUpdaterInfo = new UpdaterStruct();
-  frameUpdaterInfo->vidCap = vidCap;
-  frameUpdaterInfo->frame = frame_host;
-  frameUpdaterInfo->frameLocker = &frameLocker;
+  UpdaterStruct frameUpdaterInfo;
+  frameUpdaterInfo.vidCap = &vidCap;
+  frameUpdaterInfo.frame = &frame_host;
+  frameUpdaterInfo.frameLocker = &frameLocker;
 
   //Start the updater thread
-  pthread_create(&updater_thread,NULL,continousFrameUpdater,(void*)frameUpdaterInfo);
+  pthread_create(&updater_thread,NULL,continousFrameUpdater,(void*)&frameUpdaterInfo);
 
   //Start processing
   while(true) //TODO loop until keypress
   {
-    PreProcessFrame(frame_host,prePro_host,&frameLocker,false);
+    PreProcessFrame(&frame_host,&prePro_host,&frameLocker,true);
   }
-  //Termination code
-  delete vidCap,frame_host;
 }
