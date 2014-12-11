@@ -37,9 +37,6 @@ void* continousFrameUpdater(void* arg)
       tempMat.copyTo(*criticalFrame);
       pthread_mutex_unlock(locker);
       //End of mutex critical
-
-      imshow("Original Image", tempMat);
-      waitKey(1);
     }
   }
 }
@@ -67,12 +64,13 @@ void* parallelGpuBitwise_NOT(void* arg)
 }
 
 
+//PreProcess variables
+Mat copiedMat;
+gpu::GpuMat src, dst, channels[3], redBlueAND, redBlueNOT, eroded;
+pthread_t thresh_threads[3],bitwise_not_threads[2];
+
 void PreProcessFrame(Mat *src_host, Mat *dst_host, pthread_mutex_t *frameLocker, bool DisplayResualt)
 {
-  Mat copiedMat;
-  gpu::GpuMat src, dst, channels[3], redBlueAND, redBlueNOT, eroded;
-  pthread_t thresh_threads[3],bitwise_not_threads[2];
-
   //Mutex critical area
   pthread_mutex_lock(frameLocker);
   src_host->copyTo(copiedMat);
@@ -105,14 +103,16 @@ void PreProcessFrame(Mat *src_host, Mat *dst_host, pthread_mutex_t *frameLocker,
 
     gpu::bitwise_and(redBlueNOT,channels[1],dst);
 
-    gpu::erode(dst,eroded,Mat(),Point(-1,-1),2);
-    gpu::dilate(eroded,dst,Mat());
+    gpu::erode(dst,eroded,Mat(),Point(-1,-1),3);
+    gpu::dilate(eroded,dst,Mat(),Point(-1,-1),3);
 
     dst.download(*dst_host);
 
     if(DisplayResualt)
     {
       imshow("Preprocessing Resault",*dst_host);
+      imshow("Original Image", copiedMat);
+
       waitKey(1);
     }
   }
