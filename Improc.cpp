@@ -24,23 +24,22 @@ void* continousFrameUpdater(void* arg)
   info->vidCap->open(videoStreamAddress);
   pthread_mutex_t *locker = info->frameLocker;
 
-  Mat *tempMat;
+  Mat tempMat;
 
   while(true)
   {
-    *vidCap >> *tempMat;
+    *vidCap >> tempMat;
 
-    if(tempMat->empty())
-    {
-      cout << "Empty Frame!" << endl;
-    }
-    else
+    if(!tempMat.empty())
     {
       //Mutex Critical
       pthread_mutex_lock(locker);
-      tempMat->copyTo(*criticalFrame);
+      tempMat.copyTo(*criticalFrame);
       pthread_mutex_unlock(locker);
       //End of mutex critical
+
+      imshow("Original Image", tempMat);
+      waitKey(1);
     }
   }
 }
@@ -48,10 +47,10 @@ void* continousFrameUpdater(void* arg)
 void* parallelGpuThreshold(void* arg)
 {
   gpu::GpuMat *source_and_final = (gpu::GpuMat*)arg;
-  gpu::GpuMat *middle;
+  gpu::GpuMat middle;
 
-  gpu::threshold(*source_and_final,*middle,MIN_THRESH,MAX_THRESH,THRESH_BINARY);
-  middle->copyTo(*source_and_final);
+  gpu::threshold(*source_and_final,middle,MIN_THRESH,MAX_THRESH,THRESH_BINARY);
+  middle.copyTo(*source_and_final);
 
   pthread_exit(NULL);
 }
@@ -59,13 +58,14 @@ void* parallelGpuThreshold(void* arg)
 void* parallelGpuBitwise_NOT(void* arg)
 {
   gpu::GpuMat *source_and_final = (gpu::GpuMat*)(arg);
-  gpu::GpuMat *middle;
+  gpu::GpuMat middle;
 
-  gpu::bitwise_not(*source_and_final,*middle);
-  middle->copyTo(*source_and_final);
+  gpu::bitwise_not(*source_and_final,middle);
+  middle.copyTo(*source_and_final);
 
   pthread_exit(NULL);
 }
+
 
 void PreProcessFrame(Mat *src_host, Mat *dst_host, pthread_mutex_t *frameLocker, bool DisplayResualt)
 {
@@ -85,6 +85,7 @@ void PreProcessFrame(Mat *src_host, Mat *dst_host, pthread_mutex_t *frameLocker,
   else
   {
     src.upload(copiedMat);
+
     gpu::split(src,channels);
 
     for(int i = 0; i < 3; i++)
@@ -112,6 +113,7 @@ void PreProcessFrame(Mat *src_host, Mat *dst_host, pthread_mutex_t *frameLocker,
     if(DisplayResualt)
     {
       imshow("Preprocessing Resault",*dst_host);
+      waitKey(1);
     }
   }
 }
@@ -139,9 +141,22 @@ int main()
   //Start the updater thread
   pthread_create(&updater_thread,NULL,continousFrameUpdater,(void*)&frameUpdaterInfo);
 
-  //Start processing
+  //Clock variables
+  struct timespec start, finish;
+  double elapsed;
+
   while(true) //TODO loop until keypress
   {
+    //Start the clock
+    clock_gettime(CLOCK_MONOTONIC, &start);
+
+    //Start processing
     PreProcessFrame(&frame_host,&prePro_host,&frameLocker,true);
+
+    //Clock
+    clock_gettime(CLOCK_MONOTONIC, &finish);
+    elapsed = (finish.tv_sec - start.tv_sec);
+    elapsed += (finish.tv_nsec - start.tv_nsec) / 1000000.0;
+    cout << elapsed << "ms" << endl;
   }
 }
