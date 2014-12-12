@@ -78,17 +78,17 @@ void PreProcessFrame(Mat *src_host, Mat *dst_host, pthread_mutex_t *frameLocker,
       gpu::threshold(midChannels[i],channels[i],MIN_THRESH,MAX_THRESH,THRESH_BINARY);
     }
 
-    //AND the two irrelecant channels (so all the irrelevat pixels are in one Mat)
-    gpu::bitwise_and(channels[0],channels[2],redBlueAND);
+    //OR the two irrelevant channels (so all the irrelevat pixels are in one Mat)
+    gpu::bitwise_or(channels[0],channels[2],redBlueAND);
 
-    //Make a bitwise NOT on the AND of the Red and Blue channels,...
+    //Make a bitwise NOT on the OR of the Red and Blue channels,...
     gpu::bitwise_not(redBlueAND,redBlueNOT);
-    //...So when we AND them with the green channel only the green tarkets are left (and not while ones, for example)
+    //...So when we AND them with the green channel only the green targets are left (and not white ones, for example)
     gpu::bitwise_and(redBlueNOT,channels[1],dst);
 
     //Get rid of really small pixels
-    gpu::erode(dst,eroded,Mat(),Point(-1,-1),1);
-    gpu::dilate(eroded,dst,Mat(),Point(-1,-1),1);
+    gpu::erode(dst,eroded,Mat(),Point(-1,-1),3);
+    gpu::dilate(eroded,dst,Mat(),Point(-1,-1),3);
 
     //Download the frame from the GPU memory to the CPU memory (RAM) so we can use it later
     dst.download(*dst_host);
@@ -120,17 +120,17 @@ void CalcTargets(Mat *src ,bool Display)
   //Find contours on the image
   findContours(*src, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
   //Points of the convex hull
-  vector<vector<Point> >hull(contours.size());
+  vector<vector<Point> >hulls(contours.size());
   //Points of the bounding rectangle
-  vector<RotatedRect> minRect(contours.size());
+  vector<RotatedRect> minRects(contours.size());
 
   //Calculate the convex hull and bounding rectangle from the points
   for(int i = 0; i < contours.size(); i++)
   {
-    if(contours[i].size() > 10)
+    if(contours[i].size() > 15)
     {
-      convexHull(Mat(contours[i]), hull[i], false);
-      minRect[i] = minAreaRect(Mat(contours[i]));
+      convexHull(Mat(contours[i]), hulls[i], false);
+      minRects[i] = minAreaRect(Mat(contours[i]));
     }
   }
 
@@ -138,18 +138,17 @@ void CalcTargets(Mat *src ,bool Display)
   if(Display)
   {
     //create an empty frame
-    Mat drawing = Mat::zeros(src->size(), CV_8UC3 );
-
+    Mat drawing = Mat::zeros(src->size(), CV_8UC3);
     //Draw the shapes
     for( int i = 0; i< contours.size(); i++ )
     {
       drawContours(drawing, contours, i, red, 1, 8, vector<Vec4i>(), 0, Point());
-      drawContours(drawing, hull, i, purple, 1, 8, vector<Vec4i>(), 0, Point());
+      drawContours(drawing, hulls, i, purple, 1, 8, vector<Vec4i>(), 0, Point());
 
-      minRect[i].points(rect_points);
+      minRects[i].points(rect_points);
 
       //Draw the center of mass of each rectangle
-      circle(drawing,minRect[i].center,2,green);
+      circle(drawing,minRects[i].center,2,green);
 
       //Draw rectangles
       for(int k = 0; k < 4; k++)
