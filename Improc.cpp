@@ -113,16 +113,22 @@ Scalar purple = Scalar(255,0,255);
 Scalar red = Scalar(0,0,255);
 Scalar blue  = Scalar(255,0,0);
 Scalar green = Scalar(0,255,0);
+float width, height, area, ratio;
 
 //This method calculates the convex hull for each target, the rotated bounding rectangle and the center of mass
-void CalcTargets(Mat *src ,bool Display)
+vector<RotatedRect> CalcTargets(Mat *src ,bool Display)
 {
+  //create an empty frame
+  Mat drawing = Mat::zeros(src->size(), CV_8UC3);
+
+
   //Find contours on the image
   findContours(*src, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
   //Points of the convex hull
   vector<vector<Point> >hulls(contours.size());
   //Points of the bounding rectangle
   vector<RotatedRect> minRects(contours.size());
+  vector<RotatedRect> confirmed(contours.size());
 
   //Calculate the convex hull and bounding rectangle from the points
   for(int i = 0; i < contours.size(); i++)
@@ -134,33 +140,46 @@ void CalcTargets(Mat *src ,bool Display)
     }
   }
 
-  // Show in a window
-  if(Display)
+
+  //Draw the shapes
+  for(int i = 0; i< contours.size(); i++ )
   {
-    //create an empty frame
-    Mat drawing = Mat::zeros(src->size(), CV_8UC3);
-    //Draw the shapes
-    for( int i = 0; i< contours.size(); i++ )
+    height = min(minRects[i].size.height,minRects[i].size.width);
+    width = max(minRects[i].size.height,minRects[i].size.width);
+    ratio = width / height;
+    area = width * height;
+
+    //Target verification
+    if(ratio < 8.0 && ratio > 4) //NOTE: this is only a test. Obviously should be replaced 
+    {
+      confirmed.push_back(minRects[i]);
+      minRects[i].points(rect_points);
+
+      if(Display)
+      {
+        //Draw the center of mass of each rectangle
+        circle(drawing,minRects[i].center,2,green);
+
+        //Draw rectangles
+        for(int k = 0; k < 4; k++)
+        {
+          line(drawing,rect_points[k], rect_points[(k+1)%4], green, 1, 8);
+        }
+      }
+    }
+
+    if(Display)
     {
       drawContours(drawing, contours, i, red, 1, 8, vector<Vec4i>(), 0, Point());
       drawContours(drawing, hulls, i, purple, 1, 8, vector<Vec4i>(), 0, Point());
 
-      minRects[i].points(rect_points);
-
-      //Draw the center of mass of each rectangle
-      circle(drawing,minRects[i].center,2,green);
-
-      //Draw rectangles
-      for(int k = 0; k < 4; k++)
-      {
-        line(drawing,rect_points[k], rect_points[(k+1)%4], blue, 1, 8);
-      }
+      //Display the image
+      imshow( "Targets", drawing);
+      waitKey(1);
     }
-
-    //Display the image
-    imshow( "Raw Targets", drawing );
-    waitKey(1);
   }
+
+  return confirmed;
 }
 
 int main()
