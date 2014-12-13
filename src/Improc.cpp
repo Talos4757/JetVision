@@ -14,12 +14,12 @@ using namespace cv;
 
 #define MIN_THRESH 180
 #define MAX_THRESH 255
-#define DISPLAY true
-#define H_RES 640
-#define V_RES 480
+#define DISPLAY true //change to false in production code!
+const int H_RES = 640;
+const int  V_RES = 480;
 #define FOV 67
 
-const float pixelAngle (FOV / (sqrt(pow(H_RES,2)+pow(V_RES,2))));
+const double pixel_multi = (FOV / (sqrt(pow(H_RES,2)+pow(V_RES,2))));
 
 //IP camera feed URI
 const string videoStreamAddress = "http://10.0.0.69/mjpg/video.mjpg";
@@ -112,14 +112,14 @@ void PreProcessFrame(Mat *src_host, Mat *dst_host, pthread_mutex_t *frameLocker,
 
 //CalcTargets Variables
 vector<vector<Point> > contours;
-vector<Vec4i> hierarchy;
 Point2f rect_points[4];
 vector<Point> centerPoints;
 Scalar purple = Scalar(255,0,255);
 Scalar red = Scalar(0,0,255);
 Scalar blue  = Scalar(255,0,0);
 Scalar green = Scalar(0,255,0);
-float width, height, area, ratio;
+Scalar yellow = Scalar(0,225,255);
+float width, height, area_ratio, ratio, h_angle, v_angle;
 Mat drawing;
 
 //This method calculates the convex hull for each target, the rotated bounding rectangle and the center of mass
@@ -129,12 +129,12 @@ void CalcTargets(Mat *src ,bool Display)
   if(Display)
   {
     drawing = Mat::zeros(src->size(), CV_8UC3);
+    circle(drawing,Point(H_RES/2,V_RES/2),2,yellow);
   }
 
   //Find contours on the image
-  findContours(*src, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
-  //Points of the convex hull
-//  vector<vector<Point> >hulls(contours.size());
+  findContours(*src, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
+  vector<vector<Point> >hulls(contours.size());
   //Points of the bounding rectangle
   vector<RotatedRect> minRects(contours.size());
 
@@ -143,7 +143,7 @@ void CalcTargets(Mat *src ,bool Display)
   {
     if(contours[i].size() > 15)
     {
-//      convexHull(Mat(contours[i]), hulls[i], false);
+      convexHull(Mat(contours[i]), hulls[i], false);
       minRects[i] = minAreaRect(Mat(contours[i]));
     }
   }
@@ -155,18 +155,25 @@ void CalcTargets(Mat *src ,bool Display)
     height = min(minRects[i].size.height,minRects[i].size.width);
     width = max(minRects[i].size.height,minRects[i].size.width);
     ratio = width / height;
-//    area = width * height;
- 
-    //Target verification by testing width to height ratio
-    if(ratio < 5 && ratio > 3) 
+    area_ratio = (width * height) / contourArea(contours[i]);
+
+    /* Target verification by testing width to height ratio and confirming that 
+     * the target is close to rectangle shape
+     */
+    if(ratio > 3 && ratio < 8 && area_ratio > 0.85)
     {
       minRects[i].points(rect_points);
+      centerPoints.push_back(minRects[i].center);
+
+//      angle = pixel_multi*sqrt(pow((minRects[i].center.x-(H_RES/2)),2)+pow((minRects[i].center.y - (V_RES/2)),2));
+      h_angle = pixel_multi*(minRects[i].center.x-(H_RES/2));
+      v_angle = pixel_multi*(minRects[i].center.y-(V_RES/2));
 
       if(Display)
       {
         //Draw the center of mass of each rectangle
         circle(drawing,minRects[i].center,2,green);
-        centerPoints.push_back(minRects[i].center);
+
         //Draw rectangles
         for(int k = 0; k < 4; k++)
         {
@@ -177,8 +184,8 @@ void CalcTargets(Mat *src ,bool Display)
     //Draw the convex hull and contours
     if(Display)
     {
-      drawContours(drawing, contours, i, red, 1, 8, vector<Vec4i>(), 0, Point());
-//      drawContours(drawing, hulls, i, purple, 1, 8, vector<Vec4i>(), 0, Point());
+      drawContours(drawing, contours, i, red);
+      drawContours(drawing, hulls, i, purple);
 
       //Display the image
       imshow( "Targets", drawing);
@@ -218,7 +225,7 @@ int main()
   while(true) //TODO loop until keypress
   {
     //Start the clock
-    clock_gettime(CLOCK_MONOTONIC, &start);
+    clock_gettime(CLOCK_REALTIME, &start);
 
     //Start processing
     PreProcessFrame(&frame_host,&prePro_host,&frameLocker,DISPLAY);
@@ -228,7 +235,7 @@ int main()
       CalcTargets(&prePro_host,DISPLAY);
 
       //Clock
-      clock_gettime(CLOCK_MONOTONIC, &finish);
+      clock_gettime(CLOCK_REALTIME, &finish);
       elapsed = (finish.tv_sec - start.tv_sec);
       elapsed += (finish.tv_nsec - start.tv_nsec) / 1000000.0;
       fps = 1 / (elapsed / 1000.0);
