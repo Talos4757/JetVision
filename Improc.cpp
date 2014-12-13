@@ -121,7 +121,6 @@ vector<RotatedRect> CalcTargets(Mat *src ,bool Display)
   //create an empty frame
   Mat drawing = Mat::zeros(src->size(), CV_8UC3);
 
-
   //Find contours on the image
   findContours(*src, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
   //Points of the convex hull
@@ -140,8 +139,7 @@ vector<RotatedRect> CalcTargets(Mat *src ,bool Display)
     }
   }
 
-
-  //Draw the shapes
+ //Verify targets
   for(int i = 0; i< contours.size(); i++ )
   {
     height = min(minRects[i].size.height,minRects[i].size.width);
@@ -149,7 +147,8 @@ vector<RotatedRect> CalcTargets(Mat *src ,bool Display)
     ratio = width / height;
     area = width * height;
 
-    //Target verification
+    //Target verification by testing width to height ratio 
+    //TODO Add convex hull area test
     if(ratio < 8.0 && ratio > 4) //NOTE: this is only a test. Obviously should be replaced 
     {
       confirmed.push_back(minRects[i]);
@@ -167,7 +166,7 @@ vector<RotatedRect> CalcTargets(Mat *src ,bool Display)
         }
       }
     }
-
+    //Draw the convex hull and contours
     if(Display)
     {
       drawContours(drawing, contours, i, red, 1, 8, vector<Vec4i>(), 0, Point());
