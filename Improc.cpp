@@ -12,9 +12,14 @@ using namespace cv;
 
 #include "UtilityStructs.h"
 
-#define MIN_THRESH 200
+#define MIN_THRESH 180
 #define MAX_THRESH 255
 #define DISPLAY true
+#define H_RES 640
+#define V_RES 480
+#define FOV 67
+
+const float pixelAngle (FOV / (sqrt(pow(H_RES,2)+pow(V_RES,2))));
 
 //IP camera feed URI
 const string videoStreamAddress = "http://10.0.0.69/mjpg/video.mjpg";
@@ -109,6 +114,7 @@ void PreProcessFrame(Mat *src_host, Mat *dst_host, pthread_mutex_t *frameLocker,
 vector<vector<Point> > contours;
 vector<Vec4i> hierarchy;
 Point2f rect_points[4];
+vector<Point> centerPoints;
 Scalar purple = Scalar(255,0,255);
 Scalar red = Scalar(0,0,255);
 Scalar blue  = Scalar(255,0,0);
@@ -160,7 +166,7 @@ void CalcTargets(Mat *src ,bool Display)
       {
         //Draw the center of mass of each rectangle
         circle(drawing,minRects[i].center,2,green);
-
+        centerPoints.push_back(minRects[i].center);
         //Draw rectangles
         for(int k = 0; k < 4; k++)
         {
