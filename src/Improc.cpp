@@ -15,13 +15,21 @@ using namespace cv;
 #define MIN_THRESH 180
 #define MAX_THRESH 255
 #define DISPLAY true //change to false in production code!
+
+#define FOV 67
 const int H_RES = 640;
 const int  V_RES = 480;
-#define FOV 67
+const double pixel_multi = 0.08375;
+//Formula: (FOV / (sqrt(pow(H_RES,2)+pow(V_RES,2))))
 
-const double pixel_multi = (FOV / (sqrt(pow(H_RES,2)+pow(V_RES,2))));
+//Some colors
+Scalar purple = Scalar(255,0,255);
+Scalar red = Scalar(0,0,255);
+Scalar blue  = Scalar(255,0,0);
+Scalar green = Scalar(0,255,0);
+Scalar yellow = Scalar(0,225,255);
 
-//IP camera feed URI
+//IP camera feed URI (TODO get this from params)
 const string videoStreamAddress = "http://10.0.0.69/mjpg/video.mjpg";
 
 //This method gets the most recent fram from the camera. Runs on parallel thread!
@@ -113,17 +121,11 @@ void PreProcessFrame(Mat *src_host, Mat *dst_host, pthread_mutex_t *frameLocker,
 //CalcTargets Variables
 vector<vector<Point> > contours;
 Point2f rect_points[4];
-vector<Point> centerPoints;
-Scalar purple = Scalar(255,0,255);
-Scalar red = Scalar(0,0,255);
-Scalar blue  = Scalar(255,0,0);
-Scalar green = Scalar(0,255,0);
-Scalar yellow = Scalar(0,225,255);
-float width, height, area_ratio, ratio, h_angle, v_angle;
+double width, height, area_ratio, ratio, h_angle, v_angle;
 Mat drawing;
 
-//This method calculates the convex hull for each target, the rotated bounding rectangle and the center of mass
-void CalcTargets(Mat *src ,bool Display)
+//This method identifies targets and calculates distance and angles to each target
+vector<Target> CalcTargets(Mat *src ,bool Display)
 {
   //create an empty frame
   if(Display)
@@ -132,24 +134,24 @@ void CalcTargets(Mat *src ,bool Display)
     circle(drawing,Point(H_RES/2,V_RES/2),2,yellow);
   }
 
-  //Find contours on the image
+  //Find contours on the image. (external contours only)
   findContours(*src, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
-  vector<vector<Point> >hulls(contours.size());
+
   //Points of the bounding rectangle
   vector<RotatedRect> minRects(contours.size());
 
-  //Calculate the convex hull and bounding rectangle from the points
+  //Calculate the rotated bounding rectangle from the points
   for(int i = 0; i < contours.size(); i++)
   {
     if(contours[i].size() > 15)
     {
-      convexHull(Mat(contours[i]), hulls[i], false);
       minRects[i] = minAreaRect(Mat(contours[i]));
     }
   }
 
+  vector<Target> targets;
 
- //Verify targets
+  //Verify targets
   for(int i = 0; i< contours.size(); i++ )
   {
     height = min(minRects[i].size.height,minRects[i].size.width);
@@ -160,14 +162,23 @@ void CalcTargets(Mat *src ,bool Display)
     /* Target verification by testing width to height ratio and confirming that 
      * the target is close to rectangle shape
      */
-    if(ratio > 3 && ratio < 8 && area_ratio > 0.85)
+    if(ratio > 3 && ratio < 8 && area_ratio > 0.9)
     {
       minRects[i].points(rect_points);
-      centerPoints.push_back(minRects[i].center);
 
-//      angle = pixel_multi*sqrt(pow((minRects[i].center.x-(H_RES/2)),2)+pow((minRects[i].center.y - (V_RES/2)),2));
       h_angle = pixel_multi*(minRects[i].center.x-(H_RES/2));
       v_angle = pixel_multi*(minRects[i].center.y-(V_RES/2));
+
+      cout << "Horizontal: " << h_angle << " Vertical: " << v_angle << endl;
+
+      //Add target to the vector
+      //TODO Add other data!
+      Target currentTarget;
+      currentTarget.v_angle = v_angle;
+      currentTarget.h_angle = h_angle;
+
+      //Ad target to out vector
+      targets.push_back(currentTarget);
 
       if(Display)
       {
@@ -181,17 +192,18 @@ void CalcTargets(Mat *src ,bool Display)
         }
       }
     }
-    //Draw the convex hull and contours
+    //Draw the contours
     if(Display)
     {
       drawContours(drawing, contours, i, red);
-      drawContours(drawing, hulls, i, purple);
 
       //Display the image
       imshow( "Targets", drawing);
       waitKey(1);
     }
   }
+
+  return targets;
 }
 
 int main()
@@ -222,6 +234,8 @@ int main()
   double elapsed;
   double fps;
 
+  vector<Target> targets;
+
   while(true) //TODO loop until keypress
   {
     //Start the clock
@@ -232,14 +246,15 @@ int main()
 
     if(!prePro_host.empty())
     {
-      CalcTargets(&prePro_host,DISPLAY);
+      targets = CalcTargets(&prePro_host,DISPLAY);
+      //TODO SendData(targets);
 
       //Clock
       clock_gettime(CLOCK_REALTIME, &finish);
       elapsed = (finish.tv_sec - start.tv_sec);
       elapsed += (finish.tv_nsec - start.tv_nsec) / 1000000.0;
       fps = 1 / (elapsed / 1000.0);
-      cout <<  fps  << " FPS" << endl;
+//    cout <<  fps  << " FPS" << endl;
     }
   }
 }

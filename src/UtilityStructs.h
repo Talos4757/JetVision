@@ -21,7 +21,8 @@ struct Target
 {
   //ALL numbers should be relative to the driving pivot!
   TargetType type;
-  float distance;
-  float height;
-  float angle;
+  double distance;
+  double height;
+  double h_angle;
+  double v_angle;
 };
