@@ -12,10 +12,17 @@ using namespace cv;
 
 #include "UtilityStructs.h"
 
+//Threshold values
 #define MIN_THRESH 180
 #define MAX_THRESH 255
-#define DISPLAY true //change to false in production code!
 
+#define DISPLAY false //change to false in production code!
+
+//Clock constants
+#define USED_CLOCK CLOCK_MONOTONIC_RAW
+#define NANOS 1000000000LL
+
+//Field of View (FOV) constants
 #define FOV 67
 const int H_RES = 640;
 const int  V_RES = 480;
@@ -172,12 +179,11 @@ vector<Target> CalcTargets(Mat *src ,bool Display)
       cout << "Horizontal: " << h_angle << " Vertical: " << v_angle << endl;
 
       //Add target to the vector
-      //TODO Add other data!
+      //TODO Add other data to each Target strcut (e.g. distance and type)
       Target currentTarget;
       currentTarget.v_angle = v_angle;
       currentTarget.h_angle = h_angle;
 
-      //Ad target to out vector
       targets.push_back(currentTarget);
 
       if(Display)
@@ -218,7 +224,7 @@ int main()
   //video capture setup
   VideoCapture vidCap;
   Mat frame_host;
-  Mat prePro_host;
+  Mat preProcessing_host;
 
   //Parallel frame updater info struct
   UpdaterStruct frameUpdaterInfo;
@@ -230,31 +236,31 @@ int main()
   pthread_create(&updater_thread,NULL,continousFrameUpdater,(void*)&frameUpdaterInfo);
 
   //Clock variables
-  struct timespec start, finish;
-  double elapsed;
   double fps;
+  struct timespec begin, current;
+  long long start, elapsed, microseconds;
 
   vector<Target> targets;
 
   while(true) //TODO loop until keypress
   {
     //Start the clock
-    clock_gettime(CLOCK_REALTIME, &start);
+    clock_gettime(USED_CLOCK, &begin);
+    start = begin.tv_sec*NANOS + begin.tv_nsec;
 
     //Start processing
-    PreProcessFrame(&frame_host,&prePro_host,&frameLocker,DISPLAY);
+    PreProcessFrame(&frame_host,&preProcessing_host,&frameLocker,DISPLAY);
 
-    if(!prePro_host.empty())
+    if(!preProcessing_host.empty())
     {
-      targets = CalcTargets(&prePro_host,DISPLAY);
+      targets = CalcTargets(&preProcessing_host,DISPLAY);
       //TODO SendData(targets);
 
       //Clock
-      clock_gettime(CLOCK_REALTIME, &finish);
-      elapsed = (finish.tv_sec - start.tv_sec);
-      elapsed += (finish.tv_nsec - start.tv_nsec) / 1000000.0;
-      fps = 1 / (elapsed / 1000.0);
-//    cout <<  fps  << " FPS" << endl;
+      clock_gettime(USED_CLOCK, &current);
+      elapsed = current.tv_sec*NANOS + current.tv_nsec - start;
+      fps = 1 / (elapsed / 1000000000.0);
+      cout <<  fps  << " FPS" << endl;
     }
   }
 }
