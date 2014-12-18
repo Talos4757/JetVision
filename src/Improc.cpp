@@ -12,22 +12,24 @@ using namespace cv;
 
 #include "UtilityStructs.h"
 
-//Threshold values
-#define MIN_THRESH 180
-#define MAX_THRESH 255
-
-#define DISPLAY false //change to false in production code!
-
 //Clock constants
 #define USED_CLOCK CLOCK_MONOTONIC_RAW
 #define NANOS 1000000000LL
 
+//Threshold values
+const int MIN_THRESH = 180;
+const int MAX_THRESH  = 255;
+
+bool DISPLAY = false; //Must be set to false in production code!
+
 //Field of View (FOV) constants
-#define FOV 67
+const int H_FOV = 67;
+const int V_FOV = 51;
 const int H_RES = 640;
 const int  V_RES = 480;
-const double pixel_multi = 0.08375;
-//Formula: (FOV / (sqrt(pow(H_RES,2)+pow(V_RES,2))))
+const double h_pixel_multi = 0.1046875; //67/640
+const double v_pixel_multi = 0.10625; //51/480
+
 
 //Some colors
 Scalar purple = Scalar(255,0,255);
@@ -173,8 +175,8 @@ vector<Target> CalcTargets(Mat *src ,bool Display)
     {
       minRects[i].points(rect_points);
 
-      h_angle = pixel_multi*(minRects[i].center.x-(H_RES/2));
-      v_angle = pixel_multi*(minRects[i].center.y-(V_RES/2));
+      h_angle = h_pixel_multi*(minRects[i].center.x-(H_RES/2));
+      v_angle = v_pixel_multi*(minRects[i].center.y-(V_RES/2));
 
       cout << "Horizontal: " << h_angle << " Vertical: " << v_angle << endl;
 
