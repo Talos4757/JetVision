@@ -214,7 +214,7 @@ vector<Target> CalcTargets(Mat *src ,bool Display)
   return targets;
 }
 
-int main(int argc, char* argv[])
+int StartVision(int argc, char* argv[])
 {
 
   //Parse arguments
@@ -222,12 +222,9 @@ int main(int argc, char* argv[])
   {
     for(int i = 1; i < argc; i++)
     {
-      if(string(argv[i]) == "--display")
+      if(string(argv[i]) == "--enable-gui")
       {
-        if(string(argv[i+1]) == "true")
-        {
-          DISPLAY = true;
-        }
+        DISPLAY = true;
       }
       if(string(argv[i]) == "--address")
       {
