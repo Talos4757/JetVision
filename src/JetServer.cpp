@@ -1,4 +1,8 @@
+#include <sys/socket.h>
+#include <sys/typesh>
+
 #include "Improc.cpp"
+
 
 int main(int argc, char* argv[])
 {
