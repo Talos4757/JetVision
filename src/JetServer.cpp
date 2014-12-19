@@ -2,14 +2,17 @@
 
 int main(int argc, char* argv[])
 {
+  //TODO Bind and stuff
   StartVision(argc, argv);
 }
 
-void SendData()
+void SendData(vector<Target> targets)
 {
+  for(int i = 0; i < targets.size(); i++)
+  {
+    string s = targets[i].Serialize();
+    //SEND s
+  }
 }
 
-void Serialize(Target target)
-{
-}
 

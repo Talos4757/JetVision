@@ -10,7 +10,7 @@
 using namespace std;
 using namespace cv;
 
-#include "UtilityStructs.h"
+#include "UtilityStructs.cpp"
 
 //Clock constants
 #define USED_CLOCK CLOCK_MONOTONIC_RAW
@@ -185,7 +185,6 @@ vector<Target> CalcTargets(Mat *src ,bool Display)
       Target currentTarget;
       currentTarget.v_angle = v_angle;
       currentTarget.h_angle = h_angle;
-
       targets.push_back(currentTarget);
 
       if(Display)

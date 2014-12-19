@@ -9,7 +9,7 @@ struct UpdaterStruct
 enum TargetType
 {
   //MUST be ordered by in game points value (best target is last)
-  LowGoalR,
+  LowGoalR = 1,
   LowGoalL,
   HighGoalR,
   HighGoalL,
@@ -17,12 +17,21 @@ enum TargetType
   HotGoal
 };
 
-struct Target
+class Target
 {
   //ALL numbers should be relative to the driving pivot!
-  TargetType type;
-  double distance;
-  double height;
-  double h_angle;
-  double v_angle;
+  public:
+    TargetType type;
+    double distance;
+    double height;
+    double h_angle;
+    double v_angle;
+
+    string Serialize()
+    {
+      ostringstream s;
+      s << distance << " " << height << " " << h_angle << " "
+               << v_angle << " " << type;
+      return s.str();
+    }
 };
