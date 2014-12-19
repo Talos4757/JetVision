@@ -20,8 +20,6 @@ using namespace cv;
 const int MIN_THRESH = 180;
 const int MAX_THRESH  = 255;
 
-bool DISPLAY = false; //Must be set to false in production code!
-
 //Field of View (FOV) constants
 const int H_FOV = 67;
 const int V_FOV = 51;
@@ -38,8 +36,10 @@ Scalar blue  = Scalar(255,0,0);
 Scalar green = Scalar(0,255,0);
 Scalar yellow = Scalar(0,225,255);
 
-//IP camera feed URI (TODO get this from params)
-const string videoStreamAddress = "http://10.0.0.69/mjpg/video.mjpg";
+//Default camera URI
+string videoStreamAddress = "http://10.0.0.69/mjpg/video.mjpg";
+bool DISPLAY = false;
+
 
 //This method gets the most recent fram from the camera. Runs on parallel thread!
 void* continousFrameUpdater(void* arg)
@@ -214,8 +214,28 @@ vector<Target> CalcTargets(Mat *src ,bool Display)
   return targets;
 }
 
-int main()
+int main(int argc, char* argv[])
 {
+
+  //Parse arguments
+  if(argc > 1)
+  {
+    for(int i = 1; i < argc; i++)
+    {
+      if(string(argv[i]) == "--display")
+      {
+        if(string(argv[i+1]) == "true")
+        {
+          DISPLAY = true;
+        }
+      }
+      if(string(argv[i]) == "--address")
+      {
+        videoStreamAddress = string(argv[i+1]);
+      }
+    }
+  }
+
   //Set up the frame updaer thread
   pthread_t updater_thread;
 
