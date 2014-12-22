@@ -28,6 +28,14 @@ const int  V_RES = 480;
 const double h_pixel_multi = 0.1046875; //67/640
 const double v_pixel_multi = 0.10625; //51/480
 
+//Target constants
+const int h_pix = 200;
+const double actual_h = 2.00;
+
+const int v_pix = 100;
+const double actual_v = 1.00;
+
+const int pixel_meter = v_pix/actual_v;
 
 //Some colors
 Scalar purple = Scalar(255,0,255);
@@ -41,7 +49,7 @@ string videoStreamAddress = "http://10.0.0.69/mjpg/video.mjpg";
 bool DISPLAY = false;
 
 
-//This method gets the most recent fram from the camera. Runs on parallel thread!
+//This method gets the most recent frame from the camera. Runs on parallel thread!
 void* continousFrameUpdater(void* arg)
 {
   //Convert everything back from void*
@@ -100,7 +108,7 @@ void PreProcessFrame(Mat *src_host, Mat *dst_host, pthread_mutex_t *frameLocker,
       gpu::threshold(midChannels[i],channels[i],MIN_THRESH,MAX_THRESH,THRESH_BINARY);
     }
 
-    //OR the two irrelevant channels (so all the irrelevat pixels are in one Mat)
+    //OR the two irrelevant channels (so all the irrelevant pixels are in one Mat)
     gpu::bitwise_or(channels[0],channels[2],redBlueAND);
 
     //Make a bitwise NOT on the OR of the Red and Blue channels,...
@@ -118,7 +126,7 @@ void PreProcessFrame(Mat *src_host, Mat *dst_host, pthread_mutex_t *frameLocker,
     if(DisplayResualt)
     {
       //Show the images
-      imshow("Preprocessing Resault",*dst_host);
+      imshow("Preprocessing Result",*dst_host);
       imshow("Original Image", copiedMat);
 
       waitKey(1);
@@ -130,7 +138,8 @@ void PreProcessFrame(Mat *src_host, Mat *dst_host, pthread_mutex_t *frameLocker,
 //CalcTargets Variables
 vector<vector<Point> > contours;
 Point2f rect_points[4];
-double width, height, area_ratio, ratio, h_angle, v_angle;
+double width, height, area_ratio, ratio, h_angle, v_angle, dist;
+int raw_R, raw_L;
 Mat drawing;
 
 //This method identifies targets and calculates distance and angles to each target
@@ -173,18 +182,34 @@ vector<Target> CalcTargets(Mat *src ,bool Display)
      */
     if(ratio > 3 && ratio < 8 && area_ratio > 0.9)
     {
+      Target currentTarget;
+
       minRects[i].points(rect_points);
 
       h_angle = h_pixel_multi*(minRects[i].center.x-(H_RES/2));
       v_angle = v_pixel_multi*(minRects[i].center.y-(V_RES/2));
 
-      cout << "Horizontal: " << h_angle << " Vertical: " << v_angle << endl;
+      raw_R = abs(rect_points[1].y - rect_points[2].y);
+
+      if(h_angle > 0) //Target is in the right side of the frame
+      {
+    	  raw_L = abs(rect_points[0].y - rect_points[3].y);
+    	  raw_R = abs(contours[i][1].y - contours[i][2].y);
+      }
+      else //Target is at the left side
+      {
+    	  raw_L = abs(contours[i][3].y - contours[i][3].y);
+    	  raw_R = abs(rect_points[1].y - rect_points[2].y);
+      }
+
+      dist = h_pix / ((raw_L+raw_R)/2);
+
+      cout << "Horizontal: " << h_angle << " Vertical: " << v_angle << " Distance:" << dist << endl;
 
       //Add target to the vector
-      //TODO Add other data to each Target strcut (e.g. distance and type)
-      Target currentTarget;
       currentTarget.v_angle = v_angle;
       currentTarget.h_angle = h_angle;
+      currentTarget.distance = dist;
       targets.push_back(currentTarget);
 
       if(Display)
@@ -232,7 +257,7 @@ int StartVision(int argc, char* argv[])
     }
   }
 
-  //Set up the frame updaer thread
+  //Set up the frame updater thread
   pthread_t updater_thread;
 
   //Mutex setup
@@ -260,7 +285,7 @@ int StartVision(int argc, char* argv[])
 
   vector<Target> targets;
 
-  while(true) //TODO loop until keypress
+  while(true) //TODO loop until keystroke
   {
     //Start the clock
     clock_gettime(USED_CLOCK, &begin);
