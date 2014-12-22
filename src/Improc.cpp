@@ -10,7 +10,7 @@
 using namespace std;
 using namespace cv;
 
-#include "UtilityStructs.cpp"
+#include "Utility.h"
 
 //Clock constants
 #define USED_CLOCK CLOCK_MONOTONIC_RAW
