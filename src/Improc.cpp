@@ -16,6 +16,8 @@ using namespace cv;
 #define USED_CLOCK CLOCK_MONOTONIC_RAW
 #define NANOS 1000000000LL
 
+const int epsilon = 0.1;
+
 //Threshold values
 const int MIN_THRESH = 180;
 const int MAX_THRESH  = 255;
@@ -137,7 +139,7 @@ void PreProcessFrame(Mat *src_host, Mat *dst_host, pthread_mutex_t *frameLocker,
 
 //CalcTargets Variables
 vector<vector<Point> > contours;
-Point2f rect_points[4];
+Point2f rect_points[4], miniHull[4];
 double width, height, area_ratio, ratio, h_angle, v_angle, dist;
 int raw_R, raw_L;
 Mat drawing;
@@ -157,7 +159,8 @@ vector<Target> CalcTargets(Mat *src ,bool Display)
 
   //Points of the bounding rectangle
   vector<RotatedRect> minRects(contours.size());
-
+  vector<vector<Point> > approxed(contours.size());
+  
   //Calculate the rotated bounding rectangle from the points
   for(int i = 0; i < contours.size(); i++)
   {
@@ -189,19 +192,11 @@ vector<Target> CalcTargets(Mat *src ,bool Display)
       h_angle = h_pixel_multi*(minRects[i].center.x-(H_RES/2));
       v_angle = v_pixel_multi*(minRects[i].center.y-(V_RES/2));
 
-      raw_R = abs(rect_points[1].y - rect_points[2].y);
-
-      if(h_angle > 0) //Target is in the right side of the frame
-      {
-    	  raw_L = abs(rect_points[0].y - rect_points[3].y);
-    	  raw_R = abs(contours[i][1].y - contours[i][2].y);
-      }
-      else //Target is at the left side
-      {
-    	  raw_L = abs(contours[i][3].y - contours[i][3].y);
-    	  raw_R = abs(rect_points[1].y - rect_points[2].y);
-      }
-
+      approxPolyDP(Mat(contours[i]),approxed[i],epsilon,true);
+      
+      raw_L = approxed[i][0].y-approxed[i][3].y;
+      raw_R = approxed[i][1].y-approxed[i][2].y;
+      
       dist = h_pix / ((raw_L+raw_R)/2);
 
       cout << "Horizontal: " << h_angle << " Vertical: " << v_angle << " Distance:" << dist << endl;
