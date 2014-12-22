@@ -192,13 +192,14 @@ vector<Target> CalcTargets(Mat *src ,bool Display)
       h_angle = h_pixel_multi*(minRects[i].center.x-(H_RES/2));
       v_angle = v_pixel_multi*(minRects[i].center.y-(V_RES/2));
 
-      approxPolyDP(Mat(contours[i]),approxed[i],epsilon,true);
+      approxPolyDP(Mat(contours[i]),approxed[i],epsilon,true); //THIS does not work.
       
-      raw_L = approxed[i][0].y-approxed[i][3].y;
-      raw_R = approxed[i][1].y-approxed[i][2].y;
+      raw_L = abs(approxed[i][0].y-approxed[i][3].y);
+      raw_R = abs(approxed[i][1].y-approxed[i][2].y);
       
       dist = h_pix / ((raw_L+raw_R)/2);
 
+cout << approxed[i].size() << endl;
       cout << "Horizontal: " << h_angle << " Vertical: " << v_angle << " Distance:" << dist << endl;
 
       //Add target to the vector
