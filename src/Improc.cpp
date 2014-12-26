@@ -30,14 +30,14 @@ const int  V_RES = 480;
 const double h_pixel_multi = 0.1046875; //67/640
 const double v_pixel_multi = 0.10625; //51/480
 
-//Target constants
-const int h_pix = 200;
-const double actual_h = 2.00;
+//Target constants - TEST VALUES
+const int h_pix = 200; //Pixels seen from one meter when centralized to the target
+const double actual_h = 2.00; //Meter
 
-const int v_pix = 100;
-const double actual_v = 1.00;
+const int v_pix = 100; //Pixels seen from one meter when centralized to the target
+const double actual_v = 1.00; //Meter
 
-const int pixel_meter = v_pix/actual_v;
+const int pixel_meter = v_pix/actual_v; //should be the same for vertical and horizontal
 
 //Some colors
 Scalar purple = Scalar(255,0,255);
@@ -140,9 +140,11 @@ void PreProcessFrame(Mat *src_host, Mat *dst_host, pthread_mutex_t *frameLocker,
 //CalcTargets Variables
 vector<vector<Point> > contours;
 Point2f rect_points[4], miniHull[4];
+vector<Point2f> corners;
 double width, height, area_ratio, ratio, h_angle, v_angle, dist;
 int raw_R, raw_L;
 Mat drawing;
+Point2f A,B,C,D;
 
 //This method identifies targets and calculates distance and angles to each target
 vector<Target> CalcTargets(Mat *src ,bool Display)
@@ -158,8 +160,7 @@ vector<Target> CalcTargets(Mat *src ,bool Display)
   findContours(*src, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
 
   //Points of the bounding rectangle
-  vector<RotatedRect> minRects(contours.size());
-  vector<vector<Point> > approxed(contours.size());
+  vector<RotatedRect> minRects(contours.size());  
   
   //Calculate the rotated bounding rectangle from the points
   for(int i = 0; i < contours.size(); i++)
@@ -182,44 +183,53 @@ vector<Target> CalcTargets(Mat *src ,bool Display)
 
     /* Target verification by testing width to height ratio and confirming that 
      * the target is close to rectangle shape
+     * This may be redundant because nothing is greener than the actual targets
      */
-    if(ratio > 3 && ratio < 8 && area_ratio > 0.9)
+    if(ratio > 3 && ratio < 8 && area_ratio > 0.8)
     {
-      Target currentTarget;
+		Target currentTarget;
 
-      minRects[i].points(rect_points);
+		//WARNING THIS MAY BE EXTREMELY SLOW. WE SHOULD SWITCH TO ARRAYFIRE MANUAL CORNER DETECTOR
+		goodFeaturesToTrack(Mat(contours[i], corners, 4, 0.5, 0.0)
+			
+		if(corners.size() == 4)
+		{
+			Order4Clockwise(corners,A,B,C,D);
+			raw_L = A.x - (((D.y-C.y)/(D.x-C.x))(A.x-D.x)+D.y); //I never thought analytical geometry will help me in life. Huh
+			raw_R = B.x - (((D.y-C.y)/(D.x-C.x))(B.x-D.x)+D.y)
+			
+			
+			//WRONG calculation but not a bad estimation nevertheless
+			dist = h_pix / ((raw_L+raw_R)/2)
+			
+			minRects[i].points(rect_points);
 
-      h_angle = h_pixel_multi*(minRects[i].center.x-(H_RES/2));
-      v_angle = v_pixel_multi*(minRects[i].center.y-(V_RES/2));
+			// TODO this should use the center of mass of the contour and not the bounding rectangle
+			h_angle = h_pixel_multi*(minRects[i].center.x-(H_RES/2));
+			v_angle = v_pixel_multi*(minRects[i].center.y-(V_RES/2));
 
-      approxPolyDP(Mat(contours[i]),approxed[i],epsilon,true); //THIS does not work.
-      
-      raw_L = abs(approxed[i][0].y-approxed[i][3].y);
-      raw_R = abs(approxed[i][1].y-approxed[i][2].y);
-      
-      dist = h_pix / ((raw_L+raw_R)/2);
+			cout << approxed[i].size() << endl;
+			cout << "Horizontal: " << h_angle << " Vertical: " << v_angle << " Distance:" << dist << endl;
 
-cout << approxed[i].size() << endl;
-      cout << "Horizontal: " << h_angle << " Vertical: " << v_angle << " Distance:" << dist << endl;
+			//Add target to the vector
+			currentTarget.v_angle = v_angle;
+			currentTarget.h_angle = h_angle;
+			currentTarget.distance = dist;
+			targets.push_back(currentTarget);
 
-      //Add target to the vector
-      currentTarget.v_angle = v_angle;
-      currentTarget.h_angle = h_angle;
-      currentTarget.distance = dist;
-      targets.push_back(currentTarget);
+			if(Display)
+			{
+				//Draw the center of mass of each rectangle
+				circle(drawing,minRects[i].center,2,green);
 
-      if(Display)
-      {
-        //Draw the center of mass of each rectangle
-        circle(drawing,minRects[i].center,2,green);
-
-        //Draw rectangles
-        for(int k = 0; k < 4; k++)
-        {
-          line(drawing,rect_points[k], rect_points[(k+1)%4], green, 1, 8);
-        }
-      }
-    }
+				//Draw rectangles
+				for(int k = 0; k < 4; k++)
+				{
+					line(drawing,rect_points[k], rect_points[(k+1)%4], green, 1, 8);
+				}
+			}
+		}
+	}
     //Draw the contours
     if(Display)
     {
