@@ -194,7 +194,7 @@ vector<Target> CalcTargets(Mat *src ,bool Display)
 			
 		if(corners.size() == 4)
 		{
-			Order4Clockwise(corners,A,B,C,D);
+			Order4Clockwise(corners,&A,&B,&C,&D);
 			raw_L = A.x - (((D.y-C.y)/(D.x-C.x))(A.x-D.x)+D.y); //I never thought analytical geometry will help me in life. Huh
 			raw_R = B.x - (((D.y-C.y)/(D.x-C.x))(B.x-D.x)+D.y)
 			
