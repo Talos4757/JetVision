@@ -160,8 +160,8 @@ vector<Target> CalcTargets(Mat *src ,bool Display)
   findContours(*src, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
 
   //Points of the bounding rectangle
-  vector<RotatedRect> minRects(contours.size());  
-  
+  vector<RotatedRect> minRects(contours.size());
+
   //Calculate the rotated bounding rectangle from the points
   for(int i = 0; i < contours.size(); i++)
   {
@@ -181,7 +181,7 @@ vector<Target> CalcTargets(Mat *src ,bool Display)
     ratio = width / height;
     area_ratio = (width * height) / contourArea(contours[i]);
 
-    /* Target verification by testing width to height ratio and confirming that 
+    /* Target verification by testing width to height ratio and confirming that
      * the target is close to rectangle shape
      * This may be redundant because nothing is greener than the actual targets
      */
@@ -191,17 +191,17 @@ vector<Target> CalcTargets(Mat *src ,bool Display)
 
 		//WARNING THIS MAY BE EXTREMELY SLOW. WE SHOULD SWITCH TO ARRAYFIRE MANUAL CORNER DETECTOR
 		goodFeaturesToTrack(Mat(contours[i], corners, 4, 0.5, 0.0)
-			
+
 		if(corners.size() == 4)
 		{
 			Order4Clockwise(corners,&A,&B,&C,&D);
 			raw_L = A.x - (((D.y-C.y)/(D.x-C.x))(A.x-D.x)+D.y); //I never thought analytical geometry will help me in life. Huh
 			raw_R = B.x - (((D.y-C.y)/(D.x-C.x))(B.x-D.x)+D.y)
-			
-			
+
+
 			//WRONG calculation but not a bad estimation nevertheless
 			dist = h_pix / ((raw_L+raw_R)/2)
-			
+
 			minRects[i].points(rect_points);
 
 			// TODO this should use the center of mass of the contour and not the bounding rectangle
@@ -244,9 +244,8 @@ vector<Target> CalcTargets(Mat *src ,bool Display)
   return targets;
 }
 
-int StartVision(int argc, char* argv[])
+int main(int argc, char* argv[])
 {
-
   //Parse arguments
   if(argc > 1)
   {
