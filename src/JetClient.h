@@ -21,5 +21,5 @@ private:
   static int RioSocket;
 
   static bool Init();
-  static char* Seriallize(Target *t);
+  static char* Serialize(Target *t);
 };

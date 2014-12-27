@@ -25,7 +25,7 @@ bool JetClient::Init()
   sa.sin_port = htons(JPORT);
   sa.sin_addr.s_addr = inet_addr(RIO_IP);
 
-  if(connect(RioSocket,(struct sockaddr *)&sa, sizeof(sa)) != 0)
+  if(connect(RioSocket,(struct sockaddr*)&sa, sizeof(sa)) != 0)
   {
     return false;
   }
