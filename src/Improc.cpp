@@ -304,7 +304,7 @@ int main(int argc, char* argv[])
             if(!preProcessing_host.empty())
             {
 				//Caluculate the targets angle and distance and send the info to the c/RoboRIO
-                if(SendTargets(CalcTargets(&preProcessing_host,DISPLAY)))
+                if(SendTargets(CalcTargets(&preProcessing_host,DISPLAY)) == false)
                 {
                     cout << "Error while sending target data" << endl;
                 }
