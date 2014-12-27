@@ -15,11 +15,11 @@ using namespace std;
 class JetClient
 {
 public:
-  static bool SendTargets(vector<Target*> targets);
+    static bool SendTargets(vector<Target*> targets);
 
 private:
-  static int RioSocket;
+    static int RioSocket;
 
-  static bool Init();
-  static char* Serialize(Target *t);
+    static bool Init();
+    static char* Serialize(Target *t);
 };

@@ -1,27 +1,27 @@
 struct UpdaterStruct
 {
-  VideoCapture *vidCap;
-  Mat *frame;
-  //GpuMat *gpuFrame;
-  pthread_mutex_t *frameLocker;
+    VideoCapture *vidCap;
+    Mat *frame;
+    //GpuMat *gpuFrame;
+    pthread_mutex_t *frameLocker;
 };
 
 enum TargetType
 {
-	//MUST be ordered by in game points value (best target is last)
-	NA = 0,
-	LowGoalR,
-	LowGoalL,
-	HighGoalR,
-	HighGoalL,
-	Truss,
-	HotGoal
+    //MUST be ordered by in game points value (best target is last)
+    NA = 0,
+    LowGoalR,
+    LowGoalL,
+    HighGoalR,
+    HighGoalL,
+    Truss,
+    HotGoal
 };
 
 class Target
 {
-  //ALL numbers should be relative to the driving pivot!
-  public:
+    //ALL numbers should be relative to the driving pivot!
+public:
     TargetType type = NA;
     double distance;
     double h_angle;
@@ -30,51 +30,57 @@ class Target
     string Serialize();
 };
 
-Order4Clockwise(vector<Point2f> corners,Point2f *A, Point2f *C, Point2f *B, Point2f *D) //Left-right + top-down = clockwise
+struct PointSorterX
 {
-	Zero = Point2f(0,0); //Also used later as proxy
-	Max = Point2f(H_RES,V_RES);
-	A = &Zero, C = &Zero, B = &Max, D = &Max;
-	
-	for(int i = 0; i < 3; i++)
-	{
-		if(corners[i].x > C.x)
-		{
-			C = corners[i];
-		}
-		else
-		{		
-			if(corners[i].x > A.x)
-			{
-				A = corners[i];
-			}
-		}
-		
-		if(corners[i].x < B.x)
-		{
-			B = corners[i];
-		}
-		else
-		{				
-			if(corners[i].x < D.x)
-			{
-				D = corners[i];
-			}
-		}		
-	}
-	
-	if(A.y < C.y)
-	{
-		Max = C;
-		C = A;
-		A = Max;
-	}
-	
-	
-	if(B.y < D.y)
-	{
-		Max = D;
-		D = B;
-		B = Max;
-	}
+    bool operator() (Point2f pt1, Point2f pt2)
+    {
+        return (pt1.x < pt2.x);
+    }
+} PointSorterX;
+
+Sort4Clockwise(&vector<Point2f> pts) //Left-right + top-down (clockwise)
+{
+    /*
+     * Goal:
+     * y
+     * ↑
+     * |  [0]          [1]
+     * |
+     * |   [3]       [2]
+     * *------------------→x
+     */
+
+
+    //Sort points in left to right (LTR) order
+    sort(pts->begin(), pts->end(), PointSorterX);
+
+    Point2f swapper;
+
+    /*Sort by height
+     * y
+     * ↑
+     * |  [0]          [3]
+     * |
+     * |   [1]       [2]
+     * *------------------→x
+     */
+
+    if(*pts[0].y < *pts[1].y)
+    {
+        swapper = *pts[0];
+        *pts[0] = *pts[1];
+        *pts[1] = swapper;
+    }
+
+    if(*pts[2].y > *pts[3].y)
+    {
+        swapper = *pts[0];
+        *pts[0] = *pts[1];
+        *pts[1] = swapper;
+    }
+
+    //Sort clockwise
+    swapper = *pts[3];
+    *pts[3] = *pts[1];
+    *pts[1] = swapper;
 }
