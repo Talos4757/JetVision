@@ -7,7 +7,7 @@
 #include "Improc.cpp"
 
 #define TCP_SOCKET 0
-#define JPORT 7887
+#define JPORT 4242
 #define RIO_IP "10.47.57.2"
 
 using namespace std;
