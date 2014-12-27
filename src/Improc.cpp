@@ -198,7 +198,7 @@ vector<Target> CalcTargets(Mat *src ,bool Display)
 			raw_L = A.x - (((D.y-C.y)/(D.x-C.x))(A.x-D.x)+D.y); //I never thought analytical geometry will help me in life. Huh
 			raw_R = B.x - (((D.y-C.y)/(D.x-C.x))(B.x-D.x)+D.y)
 
-			dist = (pow((v_pix/raw_R),2)/2)+(pow((v_pix/raw_L),2)/2)-(pow((actual_h),2)/4);
+			dist = sqrt((pow((v_pix/raw_R),2)/2)+(pow((v_pix/raw_L),2)/2)-(pow((actual_h),2)/4));
 			
 			minRects[i].points(rect_points);
 
