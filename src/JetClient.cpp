@@ -7,7 +7,7 @@ bool JetClient::SendTargets(vector<Target*> targets)
 
   for(int i = 0; i < target_count; i++)
   {
-    char* encodedTarget = Seriallize(targets[i]);
+    char* encodedTarget = Serialize(targets[i]);
     send(RioSocket,encodedTarget,16,0);
     delete[] encodedTarget;
   }
@@ -33,7 +33,7 @@ bool JetClient::Init()
   return true;
 }
 
-char* JetClient::Seriallize(Target *t)
+char* JetClient::Serialize(Target *t)
 {
   char* encoded = new char[16];
 
