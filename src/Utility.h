@@ -26,8 +26,6 @@ public:
     double distance;
     double h_angle;
     double v_angle;
-
-    string Serialize();
 };
 
 struct PointSorterX
