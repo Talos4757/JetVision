@@ -8,7 +8,7 @@ bool JetClient::SendTargets(vector<Target*> targets)
     for(int i = 0; i < target_count; i++)
     {
         char* encodedTarget = Serialize(targets[i]);
-        send(RioSocket,encodedTarget,16,0);
+        send(RioSocket,encodedTarget,TARGETSIZE,0);
         delete[] encodedTarget;
     }
 }
@@ -33,9 +33,9 @@ bool JetClient::Init()
     return true;
 }
 
-char* JetClient::Serialize(Target *t)
+char* JetClient::Serialize(Target *t) //if in the future this function will serialize other types, maybe it should return the length of the returned buffer
 {
-    char* encoded = new char[sizeof(int)+3*sizeof(double)];
+    char* encoded = new char[TARGETSIZE];
 
     *(int*)encoded = t->type;
     *(double*)(encoded+sizeof(int)) = t->distance;
