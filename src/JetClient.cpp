@@ -35,12 +35,12 @@ bool JetClient::Init()
 
 char* JetClient::Serialize(Target *t)
 {
-    char* encoded = new char[16];
+    char* encoded = new char[sizeof(int)+3*sizeof(double)];
 
     *(int*)encoded = t->type;
-    *(double*)(encoded+4) = t->distance;
-    *(double*)(encoded+8) = t->h_angle;
-    *(double*)(encoded+12) = t->v_angle;
+    *(double*)(encoded+sizeof(int)) = t->distance;
+    *(double*)(encoded+sizeof(int) + sizeof(double)) = t->h_angle;
+    *(double*)(encoded+sizeof(int) + 2*sizeof(double)) = t->v_angle;
 
     return encoded;
 }
