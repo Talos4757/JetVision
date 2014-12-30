@@ -18,5 +18,5 @@ $(TARGET) : $(CPPS)
 clean :
 	rm -rf src/*.o
 
-exec : 
+exec : all
 	$(TARGET)

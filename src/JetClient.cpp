@@ -9,14 +9,19 @@ int JetClient::RioSocket = 0;
 bool JetClient::SendTargets(vector<Target*> targets)
 {
     int target_count = targets.size();
-    send(RioSocket,(char*)target_count,sizeof(int),0);
+    if(send(RioSocket,(char*)&target_count,sizeof(int),0) == -1){
+	std::cout << errno << std::endl;
+	return false;
+    }
 
     for(int i = 0; i < target_count; i++)
     {
         char* encodedTarget = Serialize(targets[i]);
-        send(RioSocket,encodedTarget,TARGETSIZE,0);
+        if(send(RioSocket,encodedTarget,TARGETSIZE,0)==-1)
+		return false;
         delete[] encodedTarget;
     }
+    return true;
 }
 
 bool JetClient::Init()

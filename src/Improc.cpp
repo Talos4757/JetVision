@@ -186,7 +186,7 @@ vector<Target*> CalcTargets(Mat *src ,bool Display)
          */
         if(ratio > 3 && ratio < 8 && area_ratio > 0.8)
         {
-            Target* currentTarget;
+            Target *currentTarget = new Target();
 
             //WARNING THIS MAY BE EXTREMELY SLOW. WE SHOULD SWITCH TO ARRAYFIRE MANUAL CORNER DETECTOR
            /* goodFeaturesToTrack(Mat(contours[i], corners, 4, 0.5, 0.0)
@@ -244,6 +244,11 @@ vector<Target*> CalcTargets(Mat *src ,bool Display)
     }
 
     return targets;
+}
+
+void DeleteTargets(vector<Target*> targets){
+	for(int i =0;i<targets.size();i++)
+		delete targets[i];
 }
 
 int main(int argc, char* argv[])
@@ -304,11 +309,14 @@ int main(int argc, char* argv[])
 
             if(!preProcessing_host.empty())
             {
+		vector<Target*> targets = CalcTargets(&preProcessing_host,DISPLAY);
+
 				//Caluculate the targets angle and distance and send the info to the c/RoboRIO
-                if(JetClient::SendTargets(CalcTargets(&preProcessing_host,DISPLAY)) == false)
+                if(JetClient::SendTargets(targets) == false)
                 {
                     cout << "Error while sending target data" << endl;
                 }
+		DeleteTargets(targets);
 
                 //Clock
                 clock_gettime(USED_CLOCK, &current);
