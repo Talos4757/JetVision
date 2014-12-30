@@ -1,10 +1,15 @@
+#ifndef JETCLIENT_H
+#define JETCLIENT_H
+
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <unistd.h>
 #include <vector>
 
-#include "Improc.cpp"
+#include "Utility.h"
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #define TCP_SOCKET 0
 #define JPORT 4242
@@ -15,11 +20,12 @@ using namespace std;
 class JetClient
 {
 public:
+	static bool Init();
     static bool SendTargets(vector<Target*> targets);
 
 private:
-    static int RioSocket;
-
-    static bool Init();
+    static int RioSocket;    
     static char* Serialize(Target *t);
 };
+
+#endif

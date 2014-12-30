@@ -1,5 +1,7 @@
 #include "JetClient.h"
 
+int JetClient::RioSocket = 0; 
+
 bool JetClient::SendTargets(vector<Target*> targets)
 {
     int target_count = targets.size();

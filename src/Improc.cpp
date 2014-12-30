@@ -7,11 +7,11 @@
 #include <opencv2/gpu/gpu.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
-using namespace std;
-using namespace cv;
-
 #include "Utility.h"
 #include "JetClient.h"
+
+using namespace std;
+using namespace cv;
 
 //Clock constants
 #define USED_CLOCK CLOCK_MONOTONIC_RAW
@@ -189,7 +189,7 @@ vector<Target*> CalcTargets(Mat *src ,bool Display)
             Target* currentTarget;
 
             //WARNING THIS MAY BE EXTREMELY SLOW. WE SHOULD SWITCH TO ARRAYFIRE MANUAL CORNER DETECTOR
-            goodFeaturesToTrack(Mat(contours[i], corners, 4, 0.5, 0.0)
+           /* goodFeaturesToTrack(Mat(contours[i], corners, 4, 0.5, 0.0)
 
 			if(corners.size() == 4)
 			{
@@ -204,7 +204,7 @@ vector<Target*> CalcTargets(Mat *src ,bool Display)
 				//Caluculate the distance to target accuratley.
 				//tl;dr proof: draw the situation from top view and use the cosine thoerm twice
 				dist = sqrt((pow((v_pix/raw_R),2)/2)+(pow((v_pix/raw_L),2)/2)-(pow((actual_h),2)/4));
-
+*/
                 minRects[i].points(rect_points);
 
                 // TODO this should use the center of mass of the contour and not the bounding rectangle
@@ -216,7 +216,7 @@ vector<Target*> CalcTargets(Mat *src ,bool Display)
                 //Add target to the vector                
                 currentTarget->v_angle = v_angle;
                 currentTarget->h_angle = h_angle;
-                currentTarget->distance = dist;
+                currentTarget->distance = 8;
                 targets.push_back(currentTarget);
 
                 if(Display)
@@ -228,7 +228,7 @@ vector<Target*> CalcTargets(Mat *src ,bool Display)
                     for(int k = 0; k < 4; k++)
                     {
                         line(drawing,rect_points[k], rect_points[(k+1)%4], green, 1, 8);
-                    }
+  //                  }
                 }
             }
         }
@@ -304,7 +304,7 @@ int main(int argc, char* argv[])
             if(!preProcessing_host.empty())
             {
 				//Caluculate the targets angle and distance and send the info to the c/RoboRIO
-                if(SendTargets(CalcTargets(&preProcessing_host,DISPLAY)) == false)
+                if(JetClient::SendTargets(CalcTargets(&preProcessing_host,DISPLAY)) == false)
                 {
                     cout << "Error while sending target data" << endl;
                 }
