@@ -48,7 +48,7 @@ Scalar green = Scalar(0,255,0);
 Scalar yellow = Scalar(0,225,255);
 
 //Default camera URI
-string videoStreamAddress = "http://10.0.0.69/mjpg/video.mjpg";
+string videoStreamAddress = "http://10.47.57.11/mjpg/video.mjpg";
 bool DISPLAY = false;
 
 
@@ -284,9 +284,10 @@ int main(int argc, char* argv[])
 
     //Start the updater thread
     pthread_create(&updater_thread,NULL,continousFrameUpdater,(void*)&frameUpdaterInfo);
-
+    cout << "Initalizing.." <<endl;
     if(JetClient::Init())
     {
+	cout <<"Inited" << endl;
         //Clock variables
         double fps;
         struct timespec begin, current;

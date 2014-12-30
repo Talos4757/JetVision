@@ -1,4 +1,8 @@
 #include "JetClient.h"
+#include <errno.h>
+#include <iostream>
+
+extern int errno;
 
 int JetClient::RioSocket = 0; 
 
@@ -17,21 +21,26 @@ bool JetClient::SendTargets(vector<Target*> targets)
 
 bool JetClient::Init()
 {
-    if(RioSocket = socket(AF_INET,SOCK_STREAM,TCP_SOCKET) < 0)
+    RioSocket = socket(AF_INET,SOCK_STREAM,TCP_SOCKET);
+    if(RioSocket < 0)
     {
         return false;
     }
 
+//    std::cout << errno << std::endl;
+//    std::cout << RioSocket << std::endl;
+  
     struct sockaddr_in sa;
     sa.sin_family = AF_INET;
     sa.sin_port = htons(JPORT);
     sa.sin_addr.s_addr = inet_addr(RIO_IP);
 
-    if(connect(RioSocket,(struct sockaddr*)&sa, sizeof(sa)) != 0)
+    while(connect(RioSocket,(struct sockaddr*)&sa, sizeof(sa)) != 0)
     {
-        return false;
+	std::cout << errno << std::endl;
     }
 
+    std::cout << "Connected!" << std::endl;
     return true;
 }
 

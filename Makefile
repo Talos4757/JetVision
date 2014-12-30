@@ -14,6 +14,9 @@ all : $(TARGET)
 $(TARGET) : $(CPPS)
 	$(CC) $(CCARGS) $(CPPS) $(LIBS) $(OBJECTS) -o $@
 
-.PHONY : clean
+.PHONY : clean exec
 clean :
 	rm -rf src/*.o
+
+exec : 
+	$(TARGET)
