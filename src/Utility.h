@@ -3,6 +3,7 @@
 
 #include <opencv2/opencv.hpp>
 
+using namespace std;
 using namespace cv;
 
 struct UpdaterStruct
@@ -30,13 +31,18 @@ class Target
 {
     //ALL numbers should be relative to the driving pivot!
 public:
-    TargetType type = NA;
+    TargetType type;
     double distance;
     double h_angle;
     double v_angle;
 };
 
-/*
+void DeleteTargets(vector<Target*> targets)
+{
+	for(int i =0;i<targets.size();i++)
+		delete targets[i];
+}
+
 struct PointSorterX
 {
     bool operator() (Point2f pt1, Point2f pt2)
@@ -56,7 +62,7 @@ Sort4Clockwise(vector<Point2f> &pts) //Left-right + top-down (clockwise)
      * |   [3]       [2]
      * *------------------→x
      */
-/*
+
 
     //Sort points in left to right (LTR) order
     sort(pts->begin(), pts->end(), PointSorterX);
@@ -71,7 +77,7 @@ Sort4Clockwise(vector<Point2f> &pts) //Left-right + top-down (clockwise)
      * |   [1]       [2]
      * *------------------→x
      */
-/*
+
     if(*pts[0].y < *pts[1].y)
     {
         swapper = *pts[0];
@@ -91,6 +97,6 @@ Sort4Clockwise(vector<Point2f> &pts) //Left-right + top-down (clockwise)
     *pts[3] = *pts[1];
     *pts[1] = swapper;
 }
-*/
+
 
 #endif

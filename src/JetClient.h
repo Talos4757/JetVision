@@ -21,11 +21,11 @@ class JetClient
 {
 public:
 	static bool Init();
-    static bool SendTargets(vector<Target*> targets);
+  static bool SendTargets(vector<Target*> targets);
 
 private:
-    static int RioSocket;    
-    static char* Serialize(Target *t);
+  static int RioSocket;
+  static char* Serialize(Target *t);
 };
 
 #endif

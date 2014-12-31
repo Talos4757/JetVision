@@ -17,8 +17,6 @@ using namespace cv;
 #define USED_CLOCK CLOCK_MONOTONIC_RAW
 #define NANOS 1000000000LL
 
-const int epsilon = 0.1;
-
 //Threshold values
 const int MIN_THRESH = 180;
 const int MAX_THRESH  = 255;
@@ -40,14 +38,14 @@ const double actual_v = 1.00; //Meter
 
 const int pixel_meter = v_pix/actual_v; //should be the same for vertical and horizontal
 
-//Some colors
+//Colors
 Scalar purple = Scalar(255,0,255);
 Scalar red = Scalar(0,0,255);
 Scalar blue  = Scalar(255,0,0);
 Scalar green = Scalar(0,255,0);
 Scalar yellow = Scalar(0,225,255);
 
-//Default camera URI
+//Default camera URI and display parameter
 string videoStreamAddress = "http://10.47.57.11/mjpg/video.mjpg";
 bool DISPLAY = false;
 
@@ -180,7 +178,8 @@ vector<Target*> CalcTargets(Mat *src ,bool Display)
         ratio = width / height;
         area_ratio = (width * height) / contourArea(contours[i]);
 
-        /* Target verification by testing width to height ratio and confirming that
+        /* 
+		 * Target verification by testing width to height ratio and confirming that
          * the target is close to rectangle shape
          * This may be redundant because nothing is greener than the actual targets.
          */
@@ -188,47 +187,29 @@ vector<Target*> CalcTargets(Mat *src ,bool Display)
         {
             Target *currentTarget = new Target();
 
-            //WARNING THIS MAY BE EXTREMELY SLOW. WE SHOULD SWITCH TO ARRAYFIRE MANUAL CORNER DETECTOR
-           /* goodFeaturesToTrack(Mat(contours[i], corners, 4, 0.5, 0.0)
+            minRects[i].points(rect_points);
 
-			if(corners.size() == 4)
+            // TODO this should use the center of mass of the contour and not the bounding rectangle
+            h_angle = h_pixel_multi*(minRects[i].center.x-(H_RES/2));
+			v_angle = v_pixel_multi*(minRects[i].center.y-(V_RES/2));
+
+            cout << "Horizontal: " << h_angle << " Vertical: " << v_angle << " Distance:" << dist << endl;
+
+            //Add target to the vector                
+            currentTarget->v_angle = v_angle;
+			currentTarget->h_angle = h_angle;
+			currentTarget->distance = 0;
+			targets.push_back(currentTarget);
+
+			if(Display)
 			{
-				Sort4Clockwise(&corners);
+				//Draw the center of mass of each rectangle
+				circle(drawing,minRects[i].center,2,green);
 
-                //Caluclate the sides lengths of the bounded trapezoid
-                //a.k.a the most unreadable thing here
-                //this is basic analytical geometry 
-                raw_L = corners[0].x - (((corners[3].y-corners[2].y)/(corners[3].x-corners[2].x))(corners[0].x-corners[3].x)+corners[3].y);
-                raw_R = corners[1].x - (((corners[3].y-corners[2].y)/(corners[3].x-corners[2].x))(corners[1].x-corners[3].x)+corners[3].y);
-
-				//Caluculate the distance to target accuratley.
-				//tl;dr proof: draw the situation from top view and use the cosine thoerm twice
-				dist = sqrt((pow((v_pix/raw_R),2)/2)+(pow((v_pix/raw_L),2)/2)-(pow((actual_h),2)/4));
-*/
-                minRects[i].points(rect_points);
-
-                // TODO this should use the center of mass of the contour and not the bounding rectangle
-                h_angle = h_pixel_multi*(minRects[i].center.x-(H_RES/2));
-                v_angle = v_pixel_multi*(minRects[i].center.y-(V_RES/2));
-
-                cout << "Horizontal: " << h_angle << " Vertical: " << v_angle << " Distance:" << dist << endl;
-
-                //Add target to the vector                
-                currentTarget->v_angle = v_angle;
-                currentTarget->h_angle = h_angle;
-                currentTarget->distance = 8;
-                targets.push_back(currentTarget);
-
-                if(Display)
-                {
-                    //Draw the center of mass of each rectangle
-                    circle(drawing,minRects[i].center,2,green);
-
-                    //Draw rectangles
-                    for(int k = 0; k < 4; k++)
-                    {
-                        line(drawing,rect_points[k], rect_points[(k+1)%4], green, 1, 8);
-  //                  }
+				//Draw rectangles
+				for(int k = 0; k < 4; k++)
+				{
+					line(drawing,rect_points[k], rect_points[(k+1)%4], green, 1, 8);
                 }
             }
         }
@@ -246,11 +227,6 @@ vector<Target*> CalcTargets(Mat *src ,bool Display)
     return targets;
 }
 
-void DeleteTargets(vector<Target*> targets){
-	for(int i =0;i<targets.size();i++)
-		delete targets[i];
-}
-
 int main(int argc, char* argv[])
 {
     //Parse arguments
@@ -264,7 +240,7 @@ int main(int argc, char* argv[])
             }
             if(string(argv[i]) == "--address")
             {
-                videoStreamAddress = string(argv[i+1]);
+                videoStreamAddress = "http://" + string(argv[i+1]) + "/mjpg/video.mjpg";
             }
         }
     }
@@ -289,10 +265,12 @@ int main(int argc, char* argv[])
 
     //Start the updater thread
     pthread_create(&updater_thread,NULL,continousFrameUpdater,(void*)&frameUpdaterInfo);
-    cout << "Initalizing.." <<endl;
+    
+	cout << "Initializing.." <<endl;
     if(JetClient::Init())
     {
-	cout <<"Inited" << endl;
+		cout << "Client Connected" << endl;
+		
         //Clock variables
         double fps;
         struct timespec begin, current;
@@ -304,19 +282,21 @@ int main(int argc, char* argv[])
             clock_gettime(USED_CLOCK, &begin);
             start = begin.tv_sec*NANOS + begin.tv_nsec;
 
-            //Preprocess the frame (isolate targets and convert to black and white)
+            //Pre-process the frame (isolate targets and convert to black and white)
             PreProcessFrame(&frame_host,&preProcessing_host,&frameLocker,DISPLAY);
 
             if(!preProcessing_host.empty())
             {
-		vector<Target*> targets = CalcTargets(&preProcessing_host,DISPLAY);
+				//Calculate the targets angle and distance
+				vector<Target*> targets = CalcTargets(&preProcessing_host,DISPLAY);
 
-				//Caluculate the targets angle and distance and send the info to the c/RoboRIO
+				//Send the info to the c/RoboRIO
                 if(JetClient::SendTargets(targets) == false)
                 {
                     cout << "Error while sending target data" << endl;
                 }
-		DeleteTargets(targets);
+				
+				DeleteTargets(targets);
 
                 //Clock
                 clock_gettime(USED_CLOCK, &current);
@@ -328,6 +308,6 @@ int main(int argc, char* argv[])
     }
     else
     {
-        cout << "could not connect to server" << endl;
+        cout << "Could not connect to server, aborting." << endl;
     }
 }

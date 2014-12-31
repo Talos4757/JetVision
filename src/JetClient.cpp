@@ -2,39 +2,48 @@
 #include <errno.h>
 #include <iostream>
 
+using namespace std;
+
 extern int errno;
 
-int JetClient::RioSocket = 0; 
+int JetClient::RioSocket = 0;
 
 bool JetClient::SendTargets(vector<Target*> targets)
 {
     int target_count = targets.size();
-    if(send(RioSocket,(char*)&target_count,sizeof(int),0) == -1){
-	std::cout << errno << std::endl;
-	return false;
+    if(send(RioSocket,(char*)&target_count,sizeof(int),0) == -1)
+    {
+      cout << errno << endl;
+	    return false;
     }
 
     for(int i = 0; i < target_count; i++)
     {
         char* encodedTarget = Serialize(targets[i]);
+
         if(send(RioSocket,encodedTarget,TARGETSIZE,0)==-1)
-		return false;
+        {
+		      return false;
+        }
+
         delete[] encodedTarget;
     }
+
     return true;
 }
 
 bool JetClient::Init()
 {
     RioSocket = socket(AF_INET,SOCK_STREAM,TCP_SOCKET);
+
     if(RioSocket < 0)
     {
         return false;
     }
 
-//    std::cout << errno << std::endl;
-//    std::cout << RioSocket << std::endl;
-  
+//    cout << errno << endl;
+//    cout << RioSocket << endl;
+
     struct sockaddr_in sa;
     sa.sin_family = AF_INET;
     sa.sin_port = htons(JPORT);
@@ -42,10 +51,10 @@ bool JetClient::Init()
 
     while(connect(RioSocket,(struct sockaddr*)&sa, sizeof(sa)) != 0)
     {
-	std::cout << errno << std::endl;
+	    cout << errno << endl;
     }
 
-    std::cout << "Connected!" << std::endl;
+    cout << "Connected!" << endl;
     return true;
 }
 
