@@ -51,7 +51,7 @@ struct PointSorterX
     }
 } PointSorterX;
 
-Sort4Clockwise(vector<Point2f> &pts) //Left-right + top-down (clockwise)
+void Sort4Clockwise(vector<Point2f> &pts) //Left-right + top-down (clockwise)
 {
     /*
      * Goal:
@@ -98,5 +98,30 @@ Sort4Clockwise(vector<Point2f> &pts) //Left-right + top-down (clockwise)
     *pts[1] = swapper;
 }
 
+
+void WriteVideo(void* info)
+{   
+    UpdaterStruct *info = (UpdaterStruct*)arg;
+    Mat *criticalFrame = info->frame;
+    VideoCapture *vcap = info->vidCap;
+    pthread_mutex_t *locker = info->frameLocker;
+
+    int frame_width = vcap.get(CV_CAP_PROP_FRAME_WIDTH);
+    int frame_height = vcap.get(CV_CAP_PROP_FRAME_HEIGHT);
+    VideoWriter video("out.avi",CV_FOURCC('M','J','P','G'),10, Size(frame_width,frame_height),true);
+
+    for(;;)
+    {
+        Mat frame;
+        
+        pthread_mutex_lock(frameLocker);
+        criticalFrame->copyTo(frame);
+        pthread_mutex_unlock(frameLocker);
+
+        video.write(frame);  
+    }
+    
+    return 0;
+}
 
 #endif

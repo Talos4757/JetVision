@@ -229,22 +229,8 @@ vector<Target*> CalcTargets(Mat *src ,bool Display)
 
 int main(int argc, char* argv[])
 {
-    //Parse arguments
-    if(argc > 1)
-    {
-        for(int i = 1; i < argc; i++)
-        {
-            if(string(argv[i]) == "--enable-gui")
-            {
-                DISPLAY = true;
-            }
-            if(string(argv[i]) == "--address")
-            {
-                videoStreamAddress = "http://" + string(argv[i+1]) + "/mjpg/video.mjpg";
-            }
-        }
-    }
-
+    cout << "Starting the camera capture thread..." << endl;
+    
     //Set up the frame updater thread
     pthread_t updater_thread;
 
@@ -265,8 +251,31 @@ int main(int argc, char* argv[])
 
     //Start the updater thread
     pthread_create(&updater_thread,NULL,continousFrameUpdater,(void*)&frameUpdaterInfo);
+
+    //Parse arguments
+    if(argc > 1)
+    {
+        for(int i = 1; i < argc; i++)
+        {
+            if(string(argv[i]) == "--enable-gui")
+            {
+                DISPLAY = true;
+            }
+            
+            if(string(argv[i]) == "--address")
+            {
+                videoStreamAddress = "http://" + string(argv[i+1]) + "/mjpg/video.mjpg";
+            }
+
+            if(string(argv[i]) == "--JustSave")
+            {
+                WriteVideo((void*)&frameUpdaterInfo);
+            }
+        }
+    }
+
     
-	cout << "Initializing.." <<endl;
+	cout << "Server Initializing.." <<endl;
     if(JetClient::Init())
     {
 		cout << "Client Connected" << endl;
