@@ -171,48 +171,42 @@ vector<Target*> CalcTargets(Mat *src ,bool Display)
 
     vector<Target*> targets;
 
-    for(int i = 0; i < contours.size(); i++ )
+    for(int i = 0; i < contours.size() - 1; i++ )
     {
-        height = min(minRects[i].size.height,minRects[i].size.width);
-        width = max(minRects[i].size.height,minRects[i].size.width);
-        ratio = width / height;
-        area_ratio = (width * height) / contourArea(contours[i]);
+        Target *currentTarget = new Target();
 
-        /* 
-		 * Target verification by testing width to height ratio and confirming that
-         * the target is close to rectangle shape
-         * This may be redundant because nothing is greener than the actual targets.
-         */
-        if(ratio > 3 && ratio < 8 && area_ratio > 0.8)
+        minRects[i].points(rect_points);
+
+        // TODO this should use the center of mass of the contour and not the bounding rectangle
+        h_angle = h_pixel_multi*(minRects[i].center.x-(H_RES/2));
+        v_angle = v_pixel_multi*(minRects[i].center.y-(V_RES/2));
+        h_angle += h_pixel_multi*(minRects[i + 1].center.x-(H_RES/2));
+        v_angle += v_pixel_multi*(minRects[i + 1].center.y-(V_RES/2));
+
+        h_angle /= 2;
+        v_angle /= 2;
+
+        cout << "Horizontal: " << h_angle << " Vertical: " << v_angle << " Distance:" << dist << endl;
+
+        //Add target to the vector                
+        currentTarget->v_angle = v_angle;
+        currentTarget->h_angle = h_angle;
+        currentTarget->distance = 0;
+        targets.push_back(currentTarget);
+
+        if(Display)
         {
-            Target *currentTarget = new Target();
+            //Draw the center of mass of each rectangle
+            circle(drawing,minRects[i].center,2,green);
 
-            minRects[i].points(rect_points);
-
-            // TODO this should use the center of mass of the contour and not the bounding rectangle
-            h_angle = h_pixel_multi*(minRects[i].center.x-(H_RES/2));
-			v_angle = v_pixel_multi*(minRects[i].center.y-(V_RES/2));
-
-            cout << "Horizontal: " << h_angle << " Vertical: " << v_angle << " Distance:" << dist << endl;
-
-            //Add target to the vector                
-            currentTarget->v_angle = v_angle;
-			currentTarget->h_angle = h_angle;
-			currentTarget->distance = 0;
-			targets.push_back(currentTarget);
-
-			if(Display)
-			{
-				//Draw the center of mass of each rectangle
-				circle(drawing,minRects[i].center,2,green);
-
-				//Draw rectangles
-				for(int k = 0; k < 4; k++)
-				{
-					line(drawing,rect_points[k], rect_points[(k+1)%4], green, 1, 8);
-                }
+            //Draw rectangles
+            for(int k = 0; k < 4; k++)
+            {
+                line(drawing,rect_points[k], rect_points[(k+1)%4], green, 1, 8);
             }
-        }
+        }    
+
+        
         //Draw the contours
         if(Display)
         {
@@ -265,12 +259,7 @@ int main(int argc, char* argv[])
             if(string(argv[i]) == "--address")
             {
                 videoStreamAddress = "http://" + string(argv[i+1]) + "/mjpg/video.mjpg";
-            }
-
-            if(string(argv[i]) == "--JustSave")
-            {
-                WriteVideo((void*)&frameUpdaterInfo);
-            }
+            }            
         }
     }
 
