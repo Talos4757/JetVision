@@ -9,9 +9,12 @@ LIBS = -lopencv_core -lopencv_imgproc -lopencv_highgui\
  -lopencv_videostab -lpthread
 CCARGS = -std=c++11
 
-all : $(TARGET)
+all : $(TARGET) makeBinDir
 
-$(TARGET) : $(CPPS)
+makeBinDir :
+	mkdir -p bin
+
+$(TARGET) : $(CPPS) makeBinDir
 	$(CC) $(CCARGS) $(CPPS) $(LIBS) $(OBJECTS) -o $@
 
 .PHONY : clean exec
